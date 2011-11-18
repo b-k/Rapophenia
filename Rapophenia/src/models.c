@@ -1,9 +1,11 @@
 #include <apop.h>
 #include <R.h>
 #include <Rinternals.h>
+#include <Rdefines.h>
 #include <R_ext/Rdynload.h>
 SEXP R_get_apop_data_matrix(const apop_data *D);
 SEXP R_get_apop_data_vector(const apop_data *D);
+apop_data * apop_data_from_R_vector(const SEXP in);
 
 typedef struct {
    SEXP est_fn, draw_fn, ll_fn, constr_fn, env;
@@ -15,12 +17,17 @@ Apop_settings_free(R_model, )
 
 apop_model Rapophenia_model;
 
+#define Get_slot(m, val) GET_SLOT(m, install(#val))
+#define sexp_to_string(s) (translateChar(STRING_ELT(s, 0)))
+
+//The list version
 #define get_sexp(m, elmt) SEXP elmt ## sexp;    \
     SEXP elmt;                                                  \
     PROTECT(elmt ## sexp = findVar(install(#elmt), m));        \
     elmt = (elmt ## sexp ==R_UnboundValue) ? NULL : elmt ## sexp;   \
     UNPROTECT(1);
 
+#if 0
 #define get_number(m, type, elmt) SEXP elmt ## sexp;        \
     type elmt;                                              \
     PROTECT(elmt ## sexp =  findVar(install(#elmt), m));    \
@@ -33,24 +40,6 @@ apop_model Rapophenia_model;
     elmt = (elmt ## sexp ==R_UnboundValue) ? NULL : strdup(translateChar(STRING_ELT(elmt ## sexp, 0)));   \
     UNPROTECT(1);
 
-
-/* Had to rewrite the settings group setting macros.
- */
-
-#define settings_set_realptr(intype, s_name) {/*intype is both the list and the settings group name.*/\
-    get_number(intype, double *, s_name); /*get a local variable with the given name. */\
-    if (s_name) {    \
-        intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
-        apop_tmp_settings->s_name = s_name;    \
-    } }
-
-#define settings_set_real(intype, s_name) /*intype is both the list and the settings group name.*/\
-    get_number(intype, double *, s_name); /*get a local variable with the given name. */\
-    if (s_name) {    \
-        intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
-        apop_tmp_settings->s_name = *s_name;    \
-    }
-
 #define settings_set_char(intype, s_name) /*intype is both the list and the settings group name.*/\
     get_string(intype, s_name); /*get a local variable with the given name. */\
     if (s_name) {    \
@@ -58,54 +47,94 @@ apop_model Rapophenia_model;
         apop_tmp_settings->s_name = s_name[0];    \
     }
 
+#define settings_set_realptr(intype, s_name) {/*intype is both the list and the settings group name.*/\
+    get_number(intype, double *, s_name); /*get a local variable with the given name. */\
+    if (s_name) {    \
+        intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
+        apop_tmp_settings->s_name = s_name;    \
+    } }
+#endif
+
+/* Had to rewrite the settings group setting macros.
+ */
+
+
+#define settings_set_real(sexp, intype, s_name) /*intype is both the list and the settings group name.*/\
+    if (R_has_slot(sexp, install(#s_name))){    \
+        double *s_name = REAL(GET_SLOT(sexp, install(#s_name)));   \
+        if (s_name) {    \
+            intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
+            apop_tmp_settings->s_name = *s_name;    \
+        }   \
+    } 
+
+#define settings_logical_to_yesno(sexp, intype, s_name) /*intype is both the list and the settings group name.*/\
+    if (R_has_slot(sexp, install(#s_name))){    \
+        int *s_name = LOGICAL(GET_SLOT(sexp, install(#s_name)));   \
+        if (s_name) {    \
+            intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
+            apop_tmp_settings->s_name = (*s_name ?  'y' : 'n');    \
+        }   \
+    }
+
+#define settings_set_logical(sexp, intype, s_name) /*intype is both the list and the settings group name.*/\
+    if (R_has_slot(sexp, install(#s_name))){    \
+        int *s_name = LOGICAL(GET_SLOT(sexp, install(#s_name)));   \
+        if (s_name) {    \
+            intype ## _settings *apop_tmp_settings = apop_settings_get_grp(model, #intype, 'c');  \
+            apop_tmp_settings->s_name = *s_name;    \
+        }   \
+    }
+
 void handle_settings(apop_model *model, SEXP list){
     if (!list) return;
-    get_sexp(list, apop_mle)
-    if (apop_mle){
-        if (!Apop_settings_get_group(model, apop_mle))
-            Apop_model_add_group(model, apop_mle);
-        settings_set_realptr(apop_mle, starting_pt)
-        settings_set_real(apop_mle, verbose)
-        settings_set_real(apop_mle, tolerance)
-        settings_set_real(apop_mle, max_iterations)
-    }
-    get_sexp(list, apop_parts_wanted)
-    if (apop_parts_wanted){
-        if (!Apop_settings_get_group(model, apop_parts_wanted))
-            Apop_model_add_group(model, apop_parts_wanted);
-        settings_set_char(apop_parts_wanted, covariance);
-        settings_set_char(apop_parts_wanted, predicted);
-        settings_set_char(apop_parts_wanted, tests);
-        settings_set_char(apop_parts_wanted, info);
+    int len=LENGTH(list);
+    if (!len) return;
+    
+    for (int i=0; i< len; i++){
+        SEXP this = VECTOR_ELT(list, i); 
+        if (apop_strcmp(sexp_to_string(Get_slot(this, class)), "apop_mle_settings")){
+            SEXP apop_mle = this;
+            if (!Apop_settings_get_group(model, apop_mle))
+                Apop_model_add_group(model, apop_mle);
+    //        settings_set_realptr(apop_mle, starting_pt)     //to do
+            settings_set_logical(this, apop_mle, verbose)
+            settings_set_real(this, apop_mle, tolerance)
+            settings_set_real(this, apop_mle, max_iterations)
+        }
+        if (apop_strcmp(sexp_to_string(Get_slot(this, class)), "apop_parts_wanted_settings")){
+            if (!Apop_settings_get_group(model, apop_parts_wanted))
+                Apop_model_add_group(model, apop_parts_wanted);
+            settings_logical_to_yesno(this, apop_parts_wanted, covariance);
+            settings_logical_to_yesno(this, apop_parts_wanted, predicted);
+            settings_logical_to_yesno(this, apop_parts_wanted, tests);
+            settings_logical_to_yesno(this, apop_parts_wanted, info);
+        }
     }
 }
 
 
 SEXP setup_R_model(SEXP m){
     apop_model *new_model = apop_model_copy(Rapophenia_model);
-    get_number(m, double *, vbase);
-    get_sexp(m, estimate_function);
-    get_sexp(m, ll_function);
-    get_sexp(m, constraint_function);
-    get_sexp(m, draw_function);
-    get_sexp(m, settings);
-    get_string(m, name);
-    if (name)
-        snprintf(new_model->name, 100, "%s", name);
-    new_model->vbase = *vbase;
-    new_model->dsize = 0;           ///fill this in, ¿OK?
-    new_model->m1base = 0;           ///fill this in, ¿OK?
-    new_model->m2base = 0;           ///fill this in, ¿OK?
+    SEXP settings = Get_slot(m, settings);
+    //get_sexp(m, settings);
+    char *name = strdup(translateChar(STRING_ELT(Get_slot(m, name),0)));
+    if (name) snprintf(new_model->name, 100, "%s", name);
+    new_model->vbase = *INTEGER(Get_slot(m, vbase));
+    new_model->dsize = *INTEGER(Get_slot(m, dsize));
+    new_model->m1base = *INTEGER(Get_slot(m, m1base));
+    new_model->m2base = *INTEGER(Get_slot(m, m2base));
     Apop_model_add_group(new_model, R_model, 
-            .est_fn = estimate_function, 
-            .ll_fn = ll_function, 
-            .constr_fn = constraint_function, 
-            .draw_fn = draw_function);
+            .est_fn = Get_slot(m, estimate_function), 
+            .ll_fn = Get_slot(m, ll_function), 
+            .constr_fn = Get_slot(m, constraint_function), 
+            .draw_fn = Get_slot(m, draw_function));
     Apop_model_add_group(new_model, apop_parts_wanted);     //scaffolding.
-    if (estimate_function == NULL) new_model->estimate=NULL;
-    if (constraint_function == NULL) new_model->constraint=NULL;
-    if (ll_function == NULL) new_model->log_likelihood=NULL;
-    if (draw_function == NULL) new_model->draw=NULL;
+#define Rnil_to_NULL(sexp, checkme) if (apop_settings_get(new_model, R_model, sexp)==R_NilValue) checkme = NULL;
+    Rnil_to_NULL(est_fn, new_model->estimate);
+    Rnil_to_NULL(ll_fn, new_model->log_likelihood);
+    Rnil_to_NULL(constr_fn, new_model->constraint);
+    Rnil_to_NULL(draw_fn, new_model->draw);
     handle_settings(new_model, settings);
     return R_MakeExternalPtr(new_model, NULL, NULL);
 }
@@ -126,12 +155,13 @@ void check_data_and_params(apop_data *d, apop_model *m, SEXP env){
             defineVar(install("parameters"), R_get_apop_data_vector(d), env);*/
 }
 
+/* //not sure what this means right now
 apop_model *R_estimate(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env);
     SEXP f = Apop_settings_get(m, R_model, est_fn);
     check_data_and_params(d, m, env);
     eval(f, env);
-}
+}*/
 
 double R_ll(apop_data *d, apop_model *m){
     static int i=0;
@@ -172,7 +202,7 @@ void R_draw(double *d, gsl_rng *r, apop_model *m){
 }
 
 apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1, 
-    .estimate=R_estimate, .draw = R_draw, .log_likelihood=R_ll,
+    /*.estimate=R_estimate,*/ .draw = R_draw, .log_likelihood=R_ll,
     .constraint=R_constraint 
    };
 

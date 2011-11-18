@@ -34,42 +34,6 @@ Place sample code here.
 
  */
 
-/* Conversion between GSL vectors and R vectors.
- *
- * Written in 2007 by Andrew Clausen <clausen@econ.upenn.edu>
- * cut/pasted/modified by BK
- * Notably, we pre-pended the names so these wouldn't interfere with an installation of the GSL pkg
- */
-#include <Rdefines.h>
-
-void a_vector_assign_gsl_from_R(gsl_vector *x, SEXP y) {
-	assert(isNumeric(y));
-	double *y_ = NUMERIC_POINTER(y);
-	int n = x->size;
-	assert(LENGTH(y) == n);
-	for (int i = 0; i < n; i++)
-		gsl_vector_set(x, i, y_[i]);
-}
-
-gsl_vector *a_vector_gsl_from_R(SEXP x) {
-	gsl_vector *result = gsl_vector_alloc(LENGTH(x));
-	assert(result);
-    a_vector_assign_gsl_from_R(result, x);
-	return result;
-}
-
-SEXP a_vector_R_from_gsl(const gsl_vector *x) {
-	SEXP result;
-	int n = x->size;
-	PROTECT(result = NEW_NUMERIC(n));
-	double *x_ = NUMERIC_POINTER(result);
-	for (int i = 0; i < n; i++)
-		x_[i] = gsl_vector_get(x, i);
-	UNPROTECT(1);
-	return result;
-}
-///// End cut/paste/modify from R GSL pkg.
-
 
 /*
 Convert an R character vector into a C **char

@@ -10,6 +10,14 @@ nocheck: pkg
 	R_LIBS=$(R_LIBS) R CMD build Rapophenia
 	R_LIBS=$(R_LIBS) R CMD INSTALL -l ~/.Rlibs Rapophenia*.tar.gz
 
+
+#doesn't rebuild the pkg, so:
+#cp what_i_changed Rapophenia/...
+#make quick
+quick: 
+	R_LIBS=$(R_LIBS) R CMD build Rapophenia
+	R_LIBS=$(R_LIBS) R CMD INSTALL -l ~/.Rlibs Rapophenia*.tar.gz
+
 pkg: doc
 	mkdir -p Rapophenia/inst/doc
 	cp -r man R src tests Rapophenia

@@ -43,11 +43,7 @@ getModelElement <- function(modelname, elementname){
     
 }
 
-setupRapopModel <- function(...){
-    return( .Call("setup_R_model", 
-        as.environment(list(...)))
-    )
-}
+setupRapopModel <- function(input){ return( .Call("setup_R_model", input)) }
 
 #' Take in an un-estimated model, and estimate parameters.
 #' @param mod A model that you set up using \c setupRapopModel

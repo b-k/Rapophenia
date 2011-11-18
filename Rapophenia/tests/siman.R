@@ -29,14 +29,15 @@ sets <- as.environment(list(
                 tolerance = 1e-5,
                 starting_pt=starthere, verbose=1))))
 
-mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana", settings=sets)
-data <- as.environment(list(scaling=scale))
-est <- estimateRapopModel(mod, data)
+#mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana", settings=sets)
 
 setobj <- list(new("apop_mle_settings",tolerance=1e-5,starting_pt=starthere,verbose=TRUE),
 	new("apop_parts_wanted"))
 modobj <- new("apop_model",
 	ll_function=ll,data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
+mod <- setupRapopModel(modobj)
+data <- as.environment(list(scaling=scale))
+est <- estimateRapopModel(mod, data)
 
 params <- getModelElement(est, "parameters")
 print(params)
@@ -69,12 +70,12 @@ cc <-function(env){
     return(0)
 }
 
-mod2<- setupRapopModel(ll_function=ll,
-        constraint_function=cc, vbase=2)
-data <- as.environment(list(scale=100))
-est <- .Call("Rapophenia_estimate", mod2, data)
-params <- getModelElement(est, "parameters")
-print(params)
+#mod2<- setupRapopModel(ll_function=ll,
+#        constraint_function=cc, vbase=2)
+#data <- as.environment(list(scale=100))
+#est <- .Call("Rapophenia_estimate", mod2, data)
+#params <- getModelElement(est, "parameters")
+#print(params)
 
 
 #, parameters=as.vector(c(1.2,2.3))
