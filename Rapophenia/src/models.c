@@ -185,15 +185,14 @@ double R_constraint(apop_data *d, apop_model *m){
     SEXP evaluated;
     PROTECT(evaluated =eval(R_fcall, NULL));
     double outval = REAL(evaluated)[0];
-    UNPROTECT(2);
     if (outval){ //the parameters may have changed.
         SEXP psexp;
-        double *newparams;
         PROTECT(psexp = findVar(install("parameters"), env)); 
-        newparams = (psexp ==R_UnboundValue) ? NULL : REAL(psexp); 
-        memcpy(m->parameters->vector->data, newparams, m->parameters->vector->size);
+        double *newparams = (psexp ==R_UnboundValue) ? NULL : REAL(psexp); 
+        if (newparams) apop_data_fill_base(m->parameters, newparams);
         UNPROTECT(1);
     }
+    UNPROTECT(2);
     return outval;
 }
 

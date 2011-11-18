@@ -26,11 +26,14 @@ validate_apop_model <- function(object){
 	return(all(unlist(lapply(object@settings,is,"apop_settings"))))
 }
 
+setClassUnion("a_function",c("NULL","function"))
+
+
 setClass("apop_model",
-	representation(ll_function="function",
-        estimate_function="function",
-        constraint_function="function",
-        draw_function="function",
+	representation(ll_function="a_function",
+        estimate_function="a_function",
+        constraint_function="a_function",
+        draw_function="a_function",
         parameters="numeric",
 		data="data.frame",
 		dsize="integer",
