@@ -23,21 +23,21 @@ ll <- function(env){
     return (-((1-env$parameters[1,1])**2 + env$scaling*(env$parameters[2,1]-env$parameters[1,1]**2)**2))
 }
 
-sets <- as.environment(list(
-            apop_parts_wanted=as.environment(list(none=0)),
-            apop_mle=as.environment(list(
-                tolerance = 1e-6,
-                starting_pt=starthere, verbose=1))))
+#sets <- as.environment(list(
+#apop_parts_wanted=as.environment(list(none=0)),
+#apop_mle=as.environment(list(
+#tolerance = 1e-6,
+#starting_pt=starthere, verbose=1))))
 
 #mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana", settings=sets)
 
-setobj <- list(new("apop_mle_settings",tolerance=1e-5,starting_pt=starthere,verbose=TRUE),
+setobj <- list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,verbose=TRUE),
 	new("apop_parts_wanted"))
 modobj <- new("apop_model",
 	ll_function=ll,data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
 data <- as.environment(list(scaling=scale))
-est <- estimateRapopModel(mod, data)
+est <- estimateRapopModel(data, mod)
 
 params <- getModelElement(est, "parameters")
 print(params)
@@ -49,7 +49,7 @@ stopifnot(sqrt(crossprod(params - as.vector(c(1,1)))) < 1e-3)
 #print(    system.time( for (i in 1:1000){
 #    mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana")
 #    data <- as.environment(list(scaling=scale))
-#    est <- estimateRapopModel(mod, data)
+#    est <- estimateRapopModel(data, mod)
 #}))
 #
 #    print("optim timing")
@@ -73,11 +73,22 @@ cc <-function(env){
 modobj <- new("apop_model",
 	ll_function=ll, constraint_function=cc, data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
-est <- estimateRapopModel(mod, data)
+est <- estimateRapopModel(data, mod)
 
 params <- getModelElement(est, "parameters")
 print(params)
 
+
+.C("init_registry")     #crashes if this is .Call. Not sure why.
+mod <-.Call("get_from_registry", "banana")
+est <- estimateRapopModel(data, mod)
+params <- getModelElement(est, "parameters")
+print(params)
+
+mod <-.Call("get_from_registry", "bananac")
+est <- estimateRapopModel(data, mod)
+params <- getModelElement(est, "parameters")
+print(params)
 
 #, parameters=as.vector(c(1.2,2.3))
 #.Call("Rapophenia_ll", m)

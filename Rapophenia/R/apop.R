@@ -50,7 +50,17 @@ setupRapopModel <- function(input){ return( .Call("setup_R_model", input)) }
 #' @param data An environment, including anything needed by your models. The system will add a \c
 #' parameters element as necessary.
 #' @return a Rapophenia model. Interrogate it using \c getModelElement
-estimateRapopModel <- function(mod, data){
+estimateRapopModel <- function(data, mod){
     stopifnot(is.environment(data))
-    return (.Call("Rapophenia_estimate", mod, data))
+    return (.Call("Rapophenia_estimate", data, mod))
+}
+
+apop_data_from_frame <- function(data){ 
+    return (.Call("apop_data_from_frame", data))
+}
+
+data_frame_from_apop_data <- function(data){ 
+    out <- .Call("data_frame_from_sexp_wrapped_apop_data", data)
+    if (is.null(out)) return (out)
+    return (as.data.frame(out))
 }

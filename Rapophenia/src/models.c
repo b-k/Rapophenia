@@ -6,9 +6,11 @@
 SEXP R_get_apop_data_matrix(const apop_data *D);
 SEXP R_get_apop_data_vector(const apop_data *D);
 apop_data * apop_data_from_R_vector(const SEXP in);
+apop_data * apop_data_from_R_matrix(const SEXP in);
 
 typedef struct {
    SEXP est_fn, draw_fn, ll_fn, constr_fn, env;
+   char is_c_model;
 } R_model_settings;
 
 Apop_settings_init(R_model, )
@@ -139,6 +141,95 @@ SEXP setup_R_model(SEXP m){
     return R_MakeExternalPtr(new_model, NULL, NULL);
 }
 
+
+/* Apophenia has a selling point of not requiring registration of models. You write a
+ model on one line, and use it on the next. 
+ //C doesn't do eval: we can't go from "apop_ols" to the apop_ols model.
+ //I couldn't work out a way to send a list of opaque pointers to R. 
+
+So: we estabish this registry of apop_models. If you write a new C-side, model register it here.
+ */
+
+apop_model **apop_model_registry;
+int registry_length;
+
+void add_to_registry(apop_model *m){
+    apop_model_registry = realloc(apop_model_registry, sizeof(apop_model*) * ++registry_length);
+    apop_model_registry[registry_length-1] = m;
+}
+
+int scaling=100;
+double ll(apop_data *ignore, apop_model *m){
+    double *p = m->parameters->vector->data;
+    return -gsl_pow_2(gsl_pow_2(1-p[0]) + scaling*(gsl_pow_2(p[1]-p[0])));
+}
+
+double constr(apop_data *keep_ignoring, apop_model *m){
+    gsl_vector *p = m->parameters->vector;
+    double penalty = 2-apop_vector_distance(p);
+    if (penalty <=0) return 0;
+    //else
+    gsl_vector_scale(p, (2/(1-penalty)));
+    return penalty;
+}
+
+apop_model banana={"banana", .vbase=2, .log_likelihood=ll};
+apop_model bananac={"bananac", .vbase=2, .log_likelihood=ll, .constraint=constr};
+
+void init_registry(){
+    apop_model_registry = NULL;
+    registry_length=0;
+    for (apop_model **m=(apop_model*[]){
+                &apop_beta,
+                &apop_bernoulli,
+                &banana,
+                &bananac,
+                &apop_binomial,
+                &apop_chi_squared,
+                &apop_dirichlet,
+                &apop_exponential,
+                &apop_f_distribution,
+                &apop_gamma,
+                &apop_histogram,
+                &apop_improper_uniform,
+                &apop_iv,
+                &apop_kernel_density,
+                &apop_loess,
+                &apop_logit,
+                &apop_lognormal,
+                &apop_multinomial,
+                &apop_multivariate_normal,
+                &apop_normal,
+                &apop_ols,
+                &apop_pmf,
+                &apop_poisson,
+                &apop_probit,
+                &apop_t_distribution,
+                &apop_uniform,
+                &apop_waring,
+                &apop_wishart,
+                &apop_wls,
+                &apop_yule,
+                &apop_zipf, NULL}; *m; m++)
+        add_to_registry(*m);
+}
+
+SEXP get_from_registry(SEXP findmexp){
+    const char *findme = sexp_to_string(findmexp);
+    apop_model *new_model = NULL;
+    for (apop_model **m=apop_model_registry; *m; m++){
+        printf("%s\t", (*m)->name);
+        if (apop_strcmp(findme, (*m)->name)){
+             new_model= apop_model_copy(**m);
+             break;
+        }
+    }
+    Apop_assert(new_model, "Couldn't find a registered model named %s.", findme);
+    Apop_model_add_group(new_model, R_model, .is_c_model = 'y');
+    return R_MakeExternalPtr(new_model, NULL, NULL);
+}
+
+
 //put the data in the sexp, if needed
 //put the parameters in the sexp if needed.
 void check_data_and_params(apop_data *d, apop_model *m, SEXP env){
@@ -190,6 +281,8 @@ double R_constraint(apop_data *d, apop_model *m){
         PROTECT(psexp = findVar(install("parameters"), env)); 
         double *newparams = (psexp ==R_UnboundValue) ? NULL : REAL(psexp); 
         if (newparams) apop_data_fill_base(m->parameters, newparams);
+        printf("in R_constraint\n");
+apop_data_show(m->parameters);
         UNPROTECT(1);
     }
     UNPROTECT(2);
@@ -205,12 +298,21 @@ apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1,
     .constraint=R_constraint 
    };
 
-SEXP Rapophenia_estimate(SEXP model, SEXP env){
+SEXP Rapophenia_estimate(SEXP env, SEXP model){
     PROTECT(model);
     PROTECT(env);
+    Apop_assert(TYPEOF(model)==EXTPTRSXP, "The second input to the estimate routine sould be a pointer to an apop_model.");
+    apop_model *est;
     apop_model *m =R_ExternalPtrAddr(model);
-    Apop_settings_add(m, R_model, env, env);
-    apop_model *est = apop_estimate(NULL, *m);
+    if (TYPEOF(env)==ENVSXP){
+        Apop_settings_add(m, R_model, env, env);
+        est = apop_estimate(NULL, *m);
+    } else if (TYPEOF(env)==EXTPTRSXP)
+        est = apop_estimate(R_ExternalPtrAddr(env), *m);
+    else if (TYPEOF(env)==VECSXP)
+        est = apop_estimate(apop_data_from_R_matrix(env), *m);
+    else Apop_assert(0, "I don't know what to do with the first argument. "
+                        "It's not an environment or a vector|matrix.");
     UNPROTECT(2);
     return R_MakeExternalPtr(est, NULL, NULL);
 }
