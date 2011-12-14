@@ -1,15 +1,29 @@
+
+#cut/pasted/not really modified from Apophenia/settings.h
+APOP_SIMPLEX_NM     =0 #/**< Nelder-Mead simplex (gradient handling rule is irrelevant) */
+APOP_CG_FR     =1      #/**<  Conjugate gradient (Fletcher-Reeves) (default) */
+APOP_CG_BFGS   =2      #/**<  Conjugate gradient (BFGS: Broyden-Fletcher-Goldfarb-Shanno) */
+APOP_CG_PR     =3      #/**<  Conjugate gradient (Polak-Ribiere) */
+APOP_SIMAN      =5     #    /**<  \ref simanneal "simulated annealing" */
+APOP_RF_NEWTON  =10    #    /**<  Find a root of the derivative via Newton's method */
+APOP_RF_HYBRID  =12  #      /**<  Find a root of the derivative via the Hybrid method */
+APOP_RF_HYBRID_NOSCALE  =13 #/**<  Find a root of the derivative via the Hybrid method; no internal scaling */
+
+
+
+
 #' Given a list of numeric, positive semi-definite matrices
 #' assumed to be from a Wishart distribution,
 #' return a new draw from the MLE-estimated Wishart.
 #' @param Lm a list of matrices.  Each element must be numeric and positive semi-definite
 #' @returns a matrix drawn from an estimated Wishart distribution
 Rapop_wishart <- function(Lm){
-	if(length(Lm)<2) stop("You need to give me at least 2 numeric matrices")
-	if(!all(lapply(Lm,is.matrix))) stop("Every list element must be a numeric matrix")
-	if(!all(lapply(Lm,is.numeric))) stop("Every list element must be a numeric matrix")
-	#flatten matrices to send to R_draw_wishart
-	Matrix <- do.call(rbind,lapply(Lm,as.numeric))
-	return(.Call("R_draw_wishart", Matrix))
+    if(length(Lm)<2) stop("You need to give me at least 2 numeric matrices")
+    if(!all(lapply(Lm,is.matrix))) stop("Every list element must be a numeric matrix")
+    if(!all(lapply(Lm,is.numeric))) stop("Every list element must be a numeric matrix")
+    #flatten matrices to send to R_draw_wishart
+    Matrix <- do.call(rbind,lapply(Lm,as.numeric))
+    return(.Call("R_draw_wishart", Matrix))
 }
 
 #' Write a text file to an SQLite database.
@@ -51,14 +65,21 @@ setupRapopModel <- function(input){ return( .Call("setup_R_model", input)) }
 #' parameters element as necessary.
 #' @return a Rapophenia model. Interrogate it using \c getModelElement
 estimateRapopModel <- function(data, mod){
-    stopifnot(is.environment(data))
+    #stopifnot(is.environment(data) || is.externalpointer(data)) #except there is no is.extpointer function that I could find.
     return (.Call("Rapophenia_estimate", data, mod))
 }
 
+#' Produce an apop_data set from an input data frame
+#' @param data A data frame
+#' @return An opaque pointer to an allocated and filled apop_data_set. As of this writing, data is copied, not pointed to.
 apop_data_from_frame <- function(data){ 
-    return (.Call("apop_data_from_frame", data))
+    stopifnot(is.data.frame(data)) 
+    return (.Call("wrapped_apop_data_from_frame", data))
 }
 
+#' Produce a data frame from an opaque pointer to an apop_data set.
+#' @param data An opaque pointer to an apop_data_set, that you generated via \ref apop_data_from_frame.
+#' @return A data frame. As of this writing, data is copied, not pointed to.
 data_frame_from_apop_data <- function(data){ 
     out <- .Call("data_frame_from_sexp_wrapped_apop_data", data)
     if (is.null(out)) return (out)

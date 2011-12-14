@@ -6,6 +6,7 @@ setClass("apop_settings")
 setClass("apop_mle_settings",
 	representation(tolerance="numeric",
 		starting_pt="numeric",
+		method="numeric",
 		max_iterations="numeric",
 		verbose="logical"),
 	prototype(tolerance=1e-5, starting_pt=0, verbose=FALSE),

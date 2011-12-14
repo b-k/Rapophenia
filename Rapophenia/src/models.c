@@ -4,9 +4,10 @@
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
 SEXP R_get_apop_data_matrix(const apop_data *D);
-SEXP R_get_apop_data_vector(const apop_data *D);
-apop_data * apop_data_from_R_vector(const SEXP in);
-apop_data * apop_data_from_R_matrix(const SEXP in);
+//SEXP R_get_apop_data_vector(const apop_data *D);
+apop_data *apop_data_from_frame(SEXP in);
+SEXP wrapped_apop_data_from_frame(SEXP in);
+SEXP data_frame_from_apop_data(apop_data *in);
 
 typedef struct {
    SEXP est_fn, draw_fn, ll_fn, constr_fn, env;
@@ -169,7 +170,7 @@ double constr(apop_data *keep_ignoring, apop_model *m){
     double penalty = 2-apop_vector_distance(p);
     if (penalty <=0) return 0;
     //else
-    gsl_vector_scale(p, (2/(1-penalty)));
+    gsl_vector_scale(p, (2/(2-penalty)));
     return penalty;
 }
 
@@ -218,7 +219,6 @@ SEXP get_from_registry(SEXP findmexp){
     const char *findme = sexp_to_string(findmexp);
     apop_model *new_model = NULL;
     for (apop_model **m=apop_model_registry; *m; m++){
-        printf("%s\t", (*m)->name);
         if (apop_strcmp(findme, (*m)->name)){
              new_model= apop_model_copy(**m);
              break;
@@ -240,19 +240,15 @@ void check_data_and_params(apop_data *d, apop_model *m, SEXP env){
     }
     if (m->parameters)
         ((findVar(install("parameters"), env) !=R_UnboundValue) //overwrite every time.
-           ? setVar : defineVar)(install("parameters"), R_get_apop_data_vector(m->parameters), env);
-/*
-        if (findVar(install("parameters"), env) ==R_UnboundValue) //overwrite every time.
-            defineVar(install("parameters"), R_get_apop_data_vector(d), env);*/
+           ? setVar : defineVar)(install("parameters"), data_frame_from_apop_data(m->parameters), env);
 }
 
-/* //not sure what this means right now
 apop_model *R_estimate(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env);
     SEXP f = Apop_settings_get(m, R_model, est_fn);
     check_data_and_params(d, m, env);
     eval(f, env);
-}*/
+}
 
 double R_ll(apop_data *d, apop_model *m){
     static int i=0;
@@ -260,8 +256,9 @@ double R_ll(apop_data *d, apop_model *m){
     check_data_and_params(d, m, env);
     SEXP R_fcall; //, val;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), env));
+    //PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), R_NilValue));
     SEXP evaluated;
-    PROTECT(evaluated =eval(R_fcall, NULL));
+    PROTECT(evaluated =eval(R_fcall, env));
     double outval = REAL(evaluated)[0];
     UNPROTECT(2);
     return outval;
@@ -277,13 +274,11 @@ double R_constraint(apop_data *d, apop_model *m){
     PROTECT(evaluated =eval(R_fcall, NULL));
     double outval = REAL(evaluated)[0];
     if (outval){ //the parameters may have changed.
-        SEXP psexp;
-        PROTECT(psexp = findVar(install("parameters"), env)); 
-        double *newparams = (psexp ==R_UnboundValue) ? NULL : REAL(psexp); 
-        if (newparams) apop_data_fill_base(m->parameters, newparams);
-        printf("in R_constraint\n");
-apop_data_show(m->parameters);
-        UNPROTECT(1);
+        SEXP psexp = findVar(install("parameters"), env);  //env is potected ==> psexp is.
+        if (psexp !=R_UnboundValue){ //replace 
+            apop_data_free(m->parameters);
+            m->parameters = apop_data_from_frame(psexp);
+        }
     }
     UNPROTECT(2);
     return outval;
@@ -294,7 +289,7 @@ void R_draw(double *d, gsl_rng *r, apop_model *m){
 }
 
 apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1, 
-    /*.estimate=R_estimate,*/ .draw = R_draw, .log_likelihood=R_ll,
+    .estimate=R_estimate, .draw = R_draw, .log_likelihood=R_ll,
     .constraint=R_constraint 
    };
 
@@ -310,9 +305,11 @@ SEXP Rapophenia_estimate(SEXP env, SEXP model){
     } else if (TYPEOF(env)==EXTPTRSXP)
         est = apop_estimate(R_ExternalPtrAddr(env), *m);
     else if (TYPEOF(env)==VECSXP)
-        est = apop_estimate(apop_data_from_R_matrix(env), *m);
+        est = apop_estimate(apop_data_from_frame(env), *m);
+    else if (TYPEOF(env)==NILSXP)
+        est = apop_estimate(NULL, *m);
     else Apop_assert(0, "I don't know what to do with the first argument. "
-                        "It's not an environment or a vector|matrix.");
+                        "It's not NULL, an environment, or a vector|matrix.");
     UNPROTECT(2);
     return R_MakeExternalPtr(est, NULL, NULL);
 }
@@ -339,5 +336,5 @@ SEXP get_model_element(SEXP model, SEXP elmtin){
     apop_model *m =R_ExternalPtrAddr(model);
     char const *elmt = translateChar(STRING_ELT(elmtin, 0));
     if (apop_strcmp(elmt, "parameters"))
-        return R_get_apop_data_vector(m->parameters);
+        return data_frame_from_apop_data(m->parameters);
 }

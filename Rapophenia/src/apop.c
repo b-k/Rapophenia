@@ -50,10 +50,10 @@ char **R_STRSXP_TO_C(SEXP s){
 /*Converts a gsl_matrix into an R matrix.
 	Returns the R matrix.
 */
-SEXP R_matrix_from_gsl_vector(const gsl_vector *X){
+SEXP R_vector_from_gsl_vector(const gsl_vector *X){
 	SEXP Y;
 	int nrow = X->size;
-	PROTECT(Y = allocMatrix(REALSXP,nrow,1));
+	PROTECT(Y = allocVector(REALSXP,nrow));
 	for (int rdx = 0; rdx < nrow; rdx++)
 		REAL(Y)[rdx] = gsl_vector_get(X, rdx);
 	UNPROTECT(1);
@@ -81,35 +81,6 @@ SEXP R_matrix_from_gsl_matrix(const gsl_matrix *X){
 	}
 	UNPROTECT(1);
 	return(Y);
-}
-
-/** Take in an R vector, copy it to the vector element of an \c apop_data set.
-
- */
-apop_data * apop_data_from_R_vector(const SEXP in){ //by BK
-    if (!in) return NULL;
-	int rowct = nrows(in);
-    apop_data *out = apop_data_alloc(rowct);
-
-	PROTECT(in);
-	for (int rdx = 0; rdx < rowct; rdx++)
-        apop_data_set(out,rdx,-1, REAL(in)[rdx]);
-
-    SEXP rl = VECTOR_ELT(getAttrib(in, R_DimNamesSymbol), 0);
-    if(rl !=R_NilValue)
-        for (int ndx=0; ndx < LENGTH(rl); ndx++)
-            apop_name_add(out->names, translateChar(STRING_ELT(rl, ndx)), 'r');
-    /*SEXP rl, cl;
-    const char *rn, *cn;
-    GetMatrixDimnames(in, &rl, &cl, &rn, &cn);
-    if(rl !=R_NilValue)
-        for (int ndx=0; ndx < LENGTH(rl); ndx++)
-            apop_name_add(out->names, translateChar(STRING_ELT(rl, ndx)), 'r');
-            //printf("row %i: %s\n", ndx, (char *) translateChar(STRING_ELT(rl, ndx)));
-            //
-            */
-	UNPROTECT(1);
-	return out;
 }
 
 /** Take in an R matrix, save it as an \c apop_data set.
@@ -157,18 +128,20 @@ SEXP gsl_matrix_test(SEXP nrow, SEXP ncol){
 	return(Y);
 }
 
-/** Pulls the vector element, row and column names from an \c apop_data set.
+/* Deprecated because I never figured out how to apply names to a vector.
+
+ Pulls the vector element, row and column names from an \c apop_data set.
 
   \li If there are fewer row names than the rows of the vector, then new names will be inserted.
 
   \param D An \c apop_data set. I ignore everything but the vector and names.
   \return An R \c SEXP, representing an \f$Nx1\f$ <b>matrix</b> with row and column names. The R side can do \c as.vector if desired.
 */
-SEXP R_get_apop_data_vector(const apop_data *D){
+/*SEXP R_get_apop_data_vector(const apop_data *D){
     if (!D || !D->vector || !D->vector->size) return R_NilValue;
 	SEXP Y, rowNames, colNames,dimNames;
 	int rowct = D->vector->size;
-	PROTECT(Y = R_matrix_from_gsl_vector(D->vector));
+	PROTECT(Y = R_vector_from_gsl_vector(D->vector));
     PROTECT(rowNames = allocVector(STRSXP,rowct));
     PROTECT(colNames = allocVector(STRSXP,1));
     PROTECT(dimNames = allocVector(VECSXP, 2));
@@ -188,7 +161,8 @@ SEXP R_get_apop_data_vector(const apop_data *D){
     setAttrib(Y, R_DimNamesSymbol, dimNames);
     UNPROTECT(4);
 	return Y;
-}
+}*/
+
 
 /** Pulls the matrix element, row and column names from an \c apop_data set.
 
@@ -200,43 +174,11 @@ SEXP R_get_apop_data_vector(const apop_data *D){
 SEXP R_get_apop_data_matrix(const apop_data *D){
     if (!D || !D->matrix || !D->matrix->size2) return R_NilValue;
 
-	SEXP Y,colNames, rowNames,dimNames;
-	int rowct = D->matrix->size1;
-	int colct = D->matrix->size2;
-	char **names = D->names->column;
-
-		PROTECT(Y = R_matrix_from_gsl_matrix(D->matrix));
-		PROTECT(rowNames = allocVector(STRSXP,rowct));
-		PROTECT(colNames = allocVector(STRSXP,colct));
-		PROTECT(dimNames = allocVector(VECSXP, 2));
-		for (int cdx = 0; cdx < colct; cdx++){
-			//mkChar automagically makes a char * into a CHARSXP
-            if (D->names->colct > cdx)
-                SET_STRING_ELT(colNames,cdx,mkChar(names[cdx]));
-            else{
-                char *colno;
-                asprintf(&colno, "V%i", cdx);
-                SET_STRING_ELT(colNames,cdx,mkChar(colno));
-                free(colno);
-            }
-		}
-		for (int rdx = 0; rdx < rowct; rdx++){
-			//mkChar automagically makes a char * into a CHARSXP
-            if (D->names->rowct > rdx)
-                SET_STRING_ELT(rowNames, rdx, mkChar(D->names->row[rdx]));
-            else{
-                char *rowno;
-                asprintf(&rowno, "Row_%i", rdx);
-                SET_STRING_ELT(rowNames, rdx, mkChar(rowno));
-                free(rowno);
-            }
-		}
-		//SET_VECTOR_ELT(dimNames,0,R_NilValue);
-		SET_VECTOR_ELT(dimNames,0,rowNames);
-		SET_VECTOR_ELT(dimNames,1,colNames);
-		setAttrib(Y, R_DimNamesSymbol, dimNames);
-		UNPROTECT(4);
-		return Y;
+	SEXP Y;
+    PROTECT(Y = R_matrix_from_gsl_matrix(D->matrix));
+    //no more names.
+    UNPROTECT(1);
+    return Y;
 }
 
 void R_apop_query(char** query){
@@ -256,7 +198,7 @@ void R_init_Rapophenia(DllInfo *info){
        {NULL, NULL, 0}
      };*/
 	 R_RegisterCCallable("Rapophenia", "R_get_apop_data_matrix", (DL_FUNC) &R_get_apop_data_matrix);
-	 R_RegisterCCallable("Rapophenia", "R_get_apop_data_vector", (DL_FUNC) &R_get_apop_data_vector);
+	 //R_RegisterCCallable("Rapophenia", "R_get_apop_data_vector", (DL_FUNC) &R_get_apop_data_vector);
 	 R_RegisterCCallable("Rapophenia", "R_STRSXP_TO_C", (DL_FUNC) &R_STRSXP_TO_C);
  }
 
@@ -275,17 +217,17 @@ static void round_trip(apop_data *m){
         for (int i=0; i< dim1; i++)
             for (int j=0; j< dim2; j++)
                 assert(apop_data_get(mreturned, i, j) == apop_data_get(m, i, j));
-        if (m->names->rowct && m->names->colct){ //If names are missing, Row_i and Col_j are inserted.
+/*        if (m->names->rowct && m->names->colct){ //If names are missing, Row_i and Col_j are inserted.
             assert(mreturned->names->rowct == m->names->rowct);
             assert(mreturned->names->colct == m->names->colct);
             for (int i=0; i< mreturned->names->rowct; i++)
                 assert(apop_strcmp(mreturned->names->row[i], m->names->row[i]));
             for (int j=0; j< mreturned->names->colct; j++)
                 assert(apop_strcmp(mreturned->names->column[j], m->names->column[j]));
-        }
+        }*/
         apop_data_free(mreturned);
     }
-    if (m->vector){
+    /*if (m->vector){
         int dim=m->vector->size;
         SEXP rvector = R_get_apop_data_vector(m);
         apop_data *mreturned = apop_data_from_R_vector(rvector);
@@ -298,7 +240,7 @@ static void round_trip(apop_data *m){
                 assert(apop_strcmp(mreturned->names->row[i], m->names->row[i]));
         }
         apop_data_free(mreturned);
-    }
+    }*/
 }
 
 //This is what the R tests call. Not really intended for use by users.
@@ -339,6 +281,7 @@ b <- Rapop_wishart(a)
 
 */
 /*let's try to wrap the apop_wishart model, just to get a draw*/
+/*
 SEXP R_draw_wishart(SEXP Rmatrix){
 	apop_data *E = apop_data_from_R_matrix(Rmatrix);
 	apop_model *M = apop_estimate(E, apop_wishart);
@@ -354,4 +297,4 @@ SEXP R_draw_wishart(SEXP Rmatrix){
 	UNPROTECT(1);
 	return(Return);
 }
-
+*/

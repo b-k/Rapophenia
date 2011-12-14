@@ -7,9 +7,27 @@ library(Rapophenia)
 #             )
 #         )
 
-starthere <-as.vector(c(8,0.1))
-scale <- 100
 
+.C("init_registry")
+mod <-.Call("get_from_registry", "banana")
+est <- estimateRapopModel(NULL, mod)
+params <- getModelElement(est, "parameters")
+print("C side banana, no constraint")
+print(params)
+
+mod <-.Call("get_from_registry", "bananac")
+est <- estimateRapopModel(NULL, mod)
+params <- getModelElement(est, "parameters")
+print("C side constrained banana")
+print(params)
+
+
+
+
+starthere <-as.vector(c(8,0.1))
+scale <- 10
+
+print("R optim says:")
     optim(starthere, 
  function(env){ return ((1-env[1])**2 + scale *(env[2]-env[1]**2)**2) }
  )
@@ -20,7 +38,7 @@ scale <- 100
 #takes in an environment.
 #   Assume elements named scaling and parameters
 ll <- function(env){
-    return (-((1-env$parameters[1,1])**2 + env$scaling*(env$parameters[2,1]-env$parameters[1,1]**2)**2))
+    return (-((1-env$parameters$Vector[1])**2 + env$scaling*(env$parameters$Vector[2]-env$parameters$Vector[1]**2)**2))
 }
 
 #sets <- as.environment(list(
@@ -31,7 +49,10 @@ ll <- function(env){
 
 #mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana", settings=sets)
 
-setobj <- list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,verbose=TRUE),
+setobj <-
+list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,
+# method=APOP_SIMAN,
+            verbose=TRUE),
 	new("apop_parts_wanted"))
 modobj <- new("apop_model",
 	ll_function=ll,data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
@@ -40,8 +61,9 @@ data <- as.environment(list(scaling=scale))
 est <- estimateRapopModel(data, mod)
 
 params <- getModelElement(est, "parameters")
+print("R-side via Apophenia")
 print(params)
-stopifnot(sqrt(crossprod(params - as.vector(c(1,1)))) < 1e-3)
+#stopifnot(sqrt(crossprod(params$Vector - as.vector(c(1,1)))) < 1e-3) ############################
 
 #Some timing tests. Last time we tried it, Rapop was about 4x faster than optim.
 #The reader may be able to find cases that reverse this.
@@ -61,13 +83,13 @@ stopifnot(sqrt(crossprod(params - as.vector(c(1,1)))) < 1e-3)
 
 
 cc <-function(env){
-    penalty <- 2-sqrt(env$parameters[1,1]**2 + env$parameters[2,1]**2)
-    if (penalty > 0){
-        env$parameters[1,1] <- env$parameters[1,1]*(2/(1-penalty))
-        env$parameters[2,1] <- env$parameters[2,1]*(2/(1-penalty))
-        return(penalty)
-    } #else
-    return(0)
+    #.Internal(inspect(env))
+    penalty <- 2-sqrt(env$parameters$Vector[1]**2 + env$parameters$Vector[2]**2)
+    if (penalty <= 0) return (0)
+    #else
+    env$parameters$Vector[1] <- env$parameters$Vector[1]*2/(2-penalty)
+    env$parameters$Vector[2] <- env$parameters$Vector[2]*2/(2-penalty)
+    return(penalty)
 }
 
 modobj <- new("apop_model",
@@ -76,19 +98,9 @@ mod <- setupRapopModel(modobj)
 est <- estimateRapopModel(data, mod)
 
 params <- getModelElement(est, "parameters")
+print("R-side constrained via Apophenia")
 print(params)
 
-
-.C("init_registry")     #crashes if this is .Call. Not sure why.
-mod <-.Call("get_from_registry", "banana")
-est <- estimateRapopModel(data, mod)
-params <- getModelElement(est, "parameters")
-print(params)
-
-mod <-.Call("get_from_registry", "bananac")
-est <- estimateRapopModel(data, mod)
-params <- getModelElement(est, "parameters")
-print(params)
 
 #, parameters=as.vector(c(1.2,2.3))
 #.Call("Rapophenia_ll", m)
