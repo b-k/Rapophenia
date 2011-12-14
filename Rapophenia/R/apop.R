@@ -53,11 +53,14 @@ TextToDB <- function(file, db, tbl, row.names=FALSE, col.names=TRUE, field.names
 }
 
 getModelElement <- function(modelname, elementname){
-    return(.Call("get_model_element", modelname, elementname))
+    return(.Call("get_model_element", modelname$model, elementname))
     
 }
 
-setupRapopModel <- function(input){ return( .Call("setup_R_model", input)) }
+setupRapopModel <- function(input){ 
+    M <-.Call("setup_R_model", input)
+    return (list(model=M))
+}
 
 #' Take in an un-estimated model, and estimate parameters.
 #' @param mod A model that you set up using \c setupRapopModel
@@ -66,7 +69,12 @@ setupRapopModel <- function(input){ return( .Call("setup_R_model", input)) }
 #' @return a Rapophenia model. Interrogate it using \c getModelElement
 estimateRapopModel <- function(data, mod){
     #stopifnot(is.environment(data) || is.externalpointer(data)) #except there is no is.extpointer function that I could find.
-    return (.Call("Rapophenia_estimate", data, mod))
+    if (!is.null(data)) env <- as.environment(data)
+    else                env <- new.env()
+    M <-.Call("Rapophenia_estimate", env, mod$model)
+    out <- list(model=M)
+    out$env <-getModelElement(out, "environment")
+    return (out)
 }
 
 #' Produce an apop_data set from an input data frame
@@ -84,4 +92,10 @@ data_frame_from_apop_data <- function(data){
     out <- .Call("data_frame_from_sexp_wrapped_apop_data", data)
     if (is.null(out)) return (out)
     return (as.data.frame(out))
+}
+
+#' We keep a registry of C models, so you can pull them to the R side by name.
+#' This will return a C-side model that should behave identically to your R-side models,
+get_C_model <- function(name){
+    return (list(model=.Call("get_from_registry", "banana")))
 }

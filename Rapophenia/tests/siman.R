@@ -9,19 +9,17 @@ library(Rapophenia)
 
 
 .C("init_registry")
-mod <-.Call("get_from_registry", "banana")
+mod <- get_C_model("banana")
 est <- estimateRapopModel(NULL, mod)
 params <- getModelElement(est, "parameters")
 print("C side banana, no constraint")
 print(params)
 
-mod <-.Call("get_from_registry", "bananac")
+mod <- get_C_model("bananac")
 est <- estimateRapopModel(NULL, mod)
 params <- getModelElement(est, "parameters")
 print("C side constrained banana")
 print(params)
-
-
 
 
 starthere <-as.vector(c(8,0.1))

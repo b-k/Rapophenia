@@ -245,19 +245,21 @@ void check_data_and_params(apop_data *d, apop_model *m, SEXP env){
 
 apop_model *R_estimate(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env);
-    SEXP f = Apop_settings_get(m, R_model, est_fn);
     check_data_and_params(d, m, env);
-    eval(f, env);
+    SEXP R_fcall;
+    PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, est_fn), env));
+    eval(R_fcall, env);
+    UNPROTECT(1);
+    return m;
 }
 
 double R_ll(apop_data *d, apop_model *m){
     static int i=0;
     SEXP env = Apop_settings_get(m, R_model, env); //protected at the Rapophenia_estimate or Rapophenia_ll level
     check_data_and_params(d, m, env);
-    SEXP R_fcall; //, val;
+    SEXP R_fcall, evaluated;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), env));
     //PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), R_NilValue));
-    SEXP evaluated;
     PROTECT(evaluated =eval(R_fcall, env));
     double outval = REAL(evaluated)[0];
     UNPROTECT(2);
@@ -284,8 +286,33 @@ double R_constraint(apop_data *d, apop_model *m){
     return outval;
 }
 
+//currently unused:
 void R_draw(double *d, gsl_rng *r, apop_model *m){
     eval(Apop_settings_get(m, R_model, draw_fn), Apop_settings_get(m, R_model, env));
+}
+
+SEXP Rapophenia_draw(SEXP model){
+    static gsl_rng *r =NULL; if (!r) r = apop_rng_alloc(apop_opts.rng_seed);
+    PROTECT(model);
+    Apop_assert(TYPEOF(model)==EXTPTRSXP, 
+            "The input to the draw routine sould be a pointer to an apop_model.");
+    apop_model *m =R_ExternalPtrAddr(model);
+    R_model_settings *rms = Apop_settings_get_group(m, R_model);
+    if (!rms || rms->is_c_model)
+        /* do something here. */;
+    else{
+        SEXP env, R_fcall, out;
+        PROTECT(env = Apop_settings_get(m, R_model, env));
+        assert(TYPEOF(Apop_settings_get(m, R_model, env)) == ENVSXP);
+        assert(TYPEOF(Apop_settings_get(m, R_model, draw_fn)) != NILSXP);
+        assert(TYPEOF(Apop_settings_get(m, R_model, draw_fn)) == CLOSXP);
+        PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, draw_fn), env));
+        PROTECT(out = eval(R_fcall, env));
+        UNPROTECT(4);
+        return out;
+    }
+    UNPROTECT(1);
+    return R_NilValue; //needs fixing.
 }
 
 apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1, 
@@ -337,4 +364,7 @@ SEXP get_model_element(SEXP model, SEXP elmtin){
     char const *elmt = translateChar(STRING_ELT(elmtin, 0));
     if (apop_strcmp(elmt, "parameters"))
         return data_frame_from_apop_data(m->parameters);
+    if (apop_strcmp(elmt, "environment"))
+        return apop_settings_get(R_ExternalPtrAddr(model), R_model, env);
+
 }
