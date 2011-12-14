@@ -53,7 +53,9 @@ TextToDB <- function(file, db, tbl, row.names=FALSE, col.names=TRUE, field.names
 }
 
 getModelElement <- function(modelname, elementname){
-    return(.Call("get_model_element", modelname$model, elementname))
+    out<- .Call("get_model_element", modelname$model, elementname)
+    print(out)
+    return(out)
     
 }
 
@@ -69,12 +71,26 @@ setupRapopModel <- function(input){
 #' @return a Rapophenia model. Interrogate it using \c getModelElement
 estimateRapopModel <- function(data, mod){
     #stopifnot(is.environment(data) || is.externalpointer(data)) #except there is no is.extpointer function that I could find.
-    if (!is.null(data)) env <- as.environment(data)
-    else                env <- new.env()
-    M <-.Call("Rapophenia_estimate", env, mod$model)
+    ctype <-getModelElement(mod, "is_c_model")
+    if (ctype=="y"){
+        M <-.Call("Rapophenia_estimate", data, mod$model)
+    } else {
+        if (!is.null(data)) env <- as.environment(data)
+        else                env <- new.env()
+        M <-.Call("Rapophenia_estimate", env, mod$model)
+    }
     out <- list(model=M)
     out$env <-getModelElement(out, "environment")
     return (out)
+}
+
+#' Make one random draw from an estimated model.
+#'
+#' @param modelList A model that you set up using \c setupRapopModel and estimated using
+#'        \ref estimateRapopModel
+#' @return a single draw from the model. If this is a C-side model, it will be a single vector; R-side models can return whatever form you like.
+RapopModelDraw <- function(modelList){
+    return(.Call("Rapophenia_draw", modelList$model))
 }
 
 #' Produce an apop_data set from an input data frame
@@ -97,5 +113,9 @@ data_frame_from_apop_data <- function(data){
 #' We keep a registry of C models, so you can pull them to the R side by name.
 #' This will return a C-side model that should behave identically to your R-side models,
 get_C_model <- function(name){
-    return (list(model=.Call("get_from_registry", "banana")))
+    return (list(model=.Call("get_from_registry", name)))
+}
+
+update <-function(data, prior, likelihood){
+   return(.Call("update_wrapper", data, prior$model, likelihood$model))
 }

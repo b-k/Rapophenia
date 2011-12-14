@@ -174,6 +174,11 @@ double constr(apop_data *keep_ignoring, apop_model *m){
     return penalty;
 }
 
+static int is_c(apop_model * m){
+    return (!Apop_settings_get_group(m, R_model) 
+                || Apop_settings_get(m, R_model, is_c_model)=='y');
+}
+
 apop_model banana={"banana", .vbase=2, .log_likelihood=ll};
 apop_model bananac={"bananac", .vbase=2, .log_likelihood=ll, .constraint=constr};
 
@@ -228,7 +233,6 @@ SEXP get_from_registry(SEXP findmexp){
     Apop_model_add_group(new_model, R_model, .is_c_model = 'y');
     return R_MakeExternalPtr(new_model, NULL, NULL);
 }
-
 
 //put the data in the sexp, if needed
 //put the parameters in the sexp if needed.
@@ -297,10 +301,17 @@ SEXP Rapophenia_draw(SEXP model){
     Apop_assert(TYPEOF(model)==EXTPTRSXP, 
             "The input to the draw routine sould be a pointer to an apop_model.");
     apop_model *m =R_ExternalPtrAddr(model);
-    R_model_settings *rms = Apop_settings_get_group(m, R_model);
-    if (!rms || rms->is_c_model)
+    if (is_c(m)){
+        Apop_assert(m->dsize > 0, "This model doesn't seem set up for random draws yet."
+                " I check whether dsize (the size of one draw) > 0, and in this case it isn't.");
+        double dd[m->dsize];
+        apop_draw(dd, r, m);
+        apop_data *out = apop_data_fill_base(apop_data_alloc(m->dsize), dd);
+        UNPROTECT(1);
+        return data_frame_from_apop_data(out);
+
         /* do something here. */;
-    else{
+    }else{
         SEXP env, R_fcall, out;
         PROTECT(env = Apop_settings_get(m, R_model, env));
         assert(TYPEOF(Apop_settings_get(m, R_model, env)) == ENVSXP);
@@ -311,8 +322,6 @@ SEXP Rapophenia_draw(SEXP model){
         UNPROTECT(4);
         return out;
     }
-    UNPROTECT(1);
-    return R_NilValue; //needs fixing.
 }
 
 apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1, 
@@ -364,7 +373,31 @@ SEXP get_model_element(SEXP model, SEXP elmtin){
     char const *elmt = translateChar(STRING_ELT(elmtin, 0));
     if (apop_strcmp(elmt, "parameters"))
         return data_frame_from_apop_data(m->parameters);
-    if (apop_strcmp(elmt, "environment"))
-        return apop_settings_get(R_ExternalPtrAddr(model), R_model, env);
+    if (apop_strcmp(elmt, "environment")){
+        if (is_c(m)) return R_NilValue;
+        else return Apop_settings_get(m, R_model, env);
+    }
+    if (apop_strcmp(elmt, "is_c_model")){
+        SEXP a_single_character;
+        PROTECT(a_single_character = allocVector(STRSXP,1));
+        char *cc, 
+        c = (!Apop_settings_get_group(m, R_model) ? 'y'
+                : Apop_settings_get(m, R_model, is_c_model));
+        asprintf(&cc, "%c", c);
+        SET_STRING_ELT(a_single_character, 0, mkChar(strdup(cc)));
+        free(cc);
+        UNPROTECT(1);
+        return a_single_character;
+    }
+}
 
+SEXP update_wrapper(SEXP dataenv, SEXP prior, SEXP likelihood){
+    PROTECT(prior); PROTECT(likelihood); PROTECT(dataenv);
+    apop_model *pm = R_ExternalPtrAddr(prior);
+    apop_model *lm = R_ExternalPtrAddr(likelihood);
+    int c_like = is_c(lm);
+    apop_data *d = c_like ? R_ExternalPtrAddr(dataenv): NULL;
+    apop_model *updated=apop_update(.data=d, pm, lm);
+    UNPROTECT(3);
+    return R_MakeExternalPtr(updated, NULL, NULL);
 }
