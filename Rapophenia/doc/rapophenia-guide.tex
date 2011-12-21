@@ -1,0 +1,241 @@
+\documentclass{article}
+\usepackage{xspace,url}
+\begin{document}
+
+\author{Rolando A Rodr\'iguez and Ben Klemens}
+\title{Rapophenia}
+\def\ad{{\tt apop\_data}\xspace}
+\def\am{{\tt apop\_model}\xspace}
+\maketitle
+
+Rapophenia is an R interface to the Apophenia library for scientific and statistical
+computing. Apophenia provides many conveniences at roughly the same level as R,
+like functions to fit OLS models, stack and subset data sets, calculate singular
+value decompositions, et cetera. When you want your C code to drive R graphics, or
+when your R program needs to run an order of magnitude faster so you rewrite it in C,
+Rapophenia will smooth the transition.
+
+Apophenia is built on two basic objects: the \ad structure, which is
+analogous to R's data frame, and the \am, which is intended to standardize
+the expression of several different types of model. Thus, Rapophenia provides utilities
+for sending these two structures across the R|C border.
+
+The R interface has only two C interface functions to work with, and their arguments
+must be one of four types ({\tt int*}, {\tt double*}, {\tt char**}, or {\tt SEXP}).
+Rapophenia provides a way to get through the bottleneck, because you can now copy a
+full data frame or \ad across the R|C border, retaining most of the structure (such as
+column and row names).
+
+Although every statistical model one could imagine is implemented in an R package, there
+is no standardization across packages, so it is difficult to replace one model with
+another. Although there is extra work that goes into getting a model to conform with a
+standard model format, the payoff is easy interchangeability, even if you never send your
+model to the C side. 
+
+R is ill-suited for simulations, which will typically run an order of magnitude faster in
+C. By writing the model in C and wrapping it in Rapophenia's model form, you will be able
+to use R's statistical routines on simulation-style models.
+
+\section{Installation} Rapophenia won't make much sense without installed copies of R and
+Apophenia. Apophenia, in turn, depends on having development versions of the GNU
+Scientific Library and the SQLite library. Installation instructions for these components
+are easily found online.
+
+\section{\ad} Most of Apophenia's functions are based on the \ad set, which is basically a
+bundling of a {\tt gsl\_matrix} and {\tt gsl\_vector} (brought in from the GNU Scientific
+Library), a grid of text, and a set of names. C is a typed language and works best when
+items of like type are grouped together; this is effectively an R data frame given those
+constraints.
+
+For both data frame $\to$ \ad and \ad $\to$ data frame, all data is copied (not pointed
+to or aliased).  R uses the FORTRAN-style column-major ordering, while C uses row-major
+ordering, so we would need tricks to make non-copying work. Also, there's really no
+way to register to R's garbage collection that a data set is also pointed to by a C
+structure, so if we didn't copy the data, it could disappear at any moment.
+
+Factors are not yet implemented, although both sides have pretty similar means of handling
+them (R stores a list of category names in  a list of attributes; Apophenia stores them
+by adding a page of data to the main data set). Because factors in R are implemented
+as integers with labels added as attributes, they will appear in the matrix of the
+\ad after translation.
+
+\paragraph{R side} From an R data frame, use 
+\begin{verbatim}
+cptr <- apop_data_from_frame(r_frame)
+\end{verbatim}
+The function generates a C-side \ad, wraps it in an R object, and returns that for you to
+save to whatever name. The R documentation
+refers to the result as an {\em external pointer}, and other sources call this sort of
+thing an {\em opaque pointer}. In R, all you can do with such a pointer is keep it on hand
+and pass it back to later C functions that will make use of the same data set. If you are
+using R as a control language that calls a series of C functions, then this will be
+useful; there are also a few examples below.
+
+To go the other way, from an R-wrapped external pointer to an \ad to a data frame, use:
+
+\begin{verbatim}
+r_frame <-data_frame_from_apop_data(cptr)
+\end{verbatim}
+
+
+\paragraph{C side} 
+On the C side, every R element---data frames, vectors, external pointers, functions,
+everything else---is wrapped in a {\tt SEXP} (an S expression pointer). 
+
+If you find yourself in a block of C code with a {\tt SEXP} pointer to a data frame, then
+use 
+
+\begin{verbatim}
+apop_data *dataset = apop_data_from_frame(SEXP_in);
+\end{verbatim}
+
+Now you can process your data using Apophenia and the GNU Scientific Library.
+
+When you are done processing, if you need to return data to the R side, then 
+produce an output data frame that can be returned to R via:
+
+\begin{verbatim}
+SEXP R_object_out = data_frame_from_apop_data(apop_data_in);
+\end{verbatim}
+
+Or just end your function with:
+\begin{verbatim}
+return data_frame_from_apop_data(apop_data_in);
+\end{verbatim}
+
+
+If you have used the R-side \verb@apop_data_from_frame@ to generate a pointer to an \ad
+set, then you can unwrap the SEXP to get to the pointer itself via the R-standard:
+\begin{verbatim}
+apop_data *d = R_ExternalPtrAddr(input_SEXP);
+\end{verbatim}
+
+
+\section{\am} Apophenia's model structure provides a standardized form for models, so that
+function authors can be guaranteed that input models will meet certain expectations. For
+example, Apophenia has a maximum likelihood function that takes in any model with a log
+likelihood or probability (and an optional dlog likelihood) and searches for the optimum
+using a variety of methods. The optimization treats the log likelihood or probability
+itself as a black box.
+
+Apophenia has default methods to fill in when a slot in the structure is empty. For
+example, if there is no routine to estimate the parameters of a model given input data,
+but there is a log likelihood, then Apophenia will use the above-mentioned maximum
+likelihood routine to derive the parameters; see the example below. If you provide a
+method to make random draws from your model, Apophenia fills in the CDF method by
+counting what percentage of random draws are below the input value.
+
+\paragraph{R side models}
+Rapophenia's models are S4 classes with slots that mirror the slots in Apophenia's models.
+After initialization, you will be able to use any of the C side routines that take \am{}s
+as inputs on models that you wrote in R. There are many steps to the process, some of
+which will change in the next version.
+
+The steps:
+
+First, write the methods as R functions. Each R function takes in a single environment as
+an argument (because we rely on a C side routine that evaluates a (function, environment)
+pair). You can expect that there is an element in the environment named {\tt parameters},
+which will be placed there by the evaluate routine. For example, here is Rosenbrock's
+banana function. Notice that we also assume that there is a {\tt scaling} element in the
+environment.
+
+\begin{verbatim}
+ll <- function(env){
+    return (-((1-env$parameters$Vector[1])**2 +
+    env$scaling*(env$parameters$Vector[2]-env$parameters$Vector[1]**2)**2))
+}
+\end{verbatim}
+
+Second, write the model, which is a new object that puts your functions into the right
+slots. There are also a few auxiliary elements, such as the {\tt vbase}, {\tt mbase1}, and
+{\tt mbase2} elements, which specify the size of the parameter set, and the {\tt name}.
+[ Apophenia limits the name to 100 characters; anything longer is truncated.]
+The {\tt data} element is a list with whatever elements may be needed for evaluating the
+model, and will be passed around with the model.
+
+\begin{verbatim}
+modobj <- new("apop_model",
+    name="banana", ll_function=ll, data=data.frame(scaling=3), 
+    vbase=2L, settings=setobj)
+\end{verbatim}
+
+Third, send the model object to the setup function, which will generate an \am structure
+with appropriate pointers to your R-side functions, and return an external pointer to the
+model. You now have a model with no parameters set (unless you explicitly set them in
+the {\tt data} element). For example, out of the box the {\tt apop\_normal} distribution
+has an undefined mean and variance.
+
+At this point, you can (almost) throw out your S4 model, because all information has been
+copied to the C side, and you will use the external pointer for all future steps. As long
+as your S4 class is in scope, we can presume that R will not garbage-collect its elements
+and the C side pointers will point to valid data; after your class goes out of scope,
+you can expect that any uses of the C side model will segfault.
+
+Fourth, estimate the model. In this step, you would send in data to find the best
+parameters given the data. The returned model, with parameters, can then be used for
+random draws, testing, or just to print the parameters.
+
+
+
+\begin{verbatim}
+mod <- setupRapopModel(modobj)
+data <- as.environment(list(scaling=scale))
+est <- estimateRapopModel(data, mod)
+\end{verbatim}
+
+
+\paragraph{C side models} Apophenia ships with a few dozen statistical models that you may
+wish to call from R; see the full list at \url{http://apophenia.info/group__models.html}.
+There are extra steps for setting up a new model that you have written yourself, below.
+
+On the C side, Apophenia follows a principle that you shouldn't have to register your
+models with a central database---just declare a new model and use it on the next line.
+This falls apart when interfacing with R, because the R|C interface has no way to pull
+up an arbitrary C symbol. Therefore, the first step is to tell C to initialize an {\em
+ad hoc} registry:
+
+\begin{verbatim}
+.C("init_registry")
+\end{verbatim}
+
+This requirement is likely to be automated soon.
+
+Now you can pull a model from the registry using its name. The name is easy to find in the
+Apophenia documentation at the link above. Once you have the external pointer in hand, you
+can use it almost as you would an R-side model. The only difference is that C side models
+can do nothing with an R environment or list, so the first argument needs to be either
+{\tt NULL} or an external pointer to an \ad, which you set up using one of the methods
+described above.
+
+\begin{verbatim}
+mod <- get_C_model("OLS")
+dataset <-apop_data_from_frame(data_frame)
+est <- estimateRapopModel(dataset, mod)
+params <- getModelElement(est, "parameters")
+print(params)
+\end{verbatim}
+
+Given the facilities Apophenia provides, you may be able to write new models in C about
+as easily as you can in R. See the Apophenia documentation at \url{http://apophenia.info}
+for all the considerations that go into structuring a model and its procedures. 
+
+To use a model with Rapophenia, you will need to register it in the list of available
+models.
+
+\begin{verbatim}
+//Probably static (initialized on startup):
+apop_model newmodel= {"A new model", .vbase=1, .p=..., .rng=...};
+
+//called via .C("init_my_models"), 
+//in lieu of the use of "init_registry" above.
+void init_my_models(){
+  init_registry();
+  add_to_registry(&newmodel);
+}
+\end{verbatim}
+
+The registry uses the model name as the identifier, so you will need a unique name for
+every model.
+
+\end{document}
