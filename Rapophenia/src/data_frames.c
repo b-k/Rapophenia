@@ -6,6 +6,18 @@
 SEXP R_get_apop_data_matrix(const apop_data *D);
 SEXP R_get_apop_data_vector(const apop_data *D);
 
+apop_data *get_factors(SEXP ls, char const *varname){
+    int nls = LENGTH(ls);
+    if (isNull(ls)) return NULL;
+    //else:
+    apop_data *out = apop_text_alloc(NULL, nls, 1);
+    for (int i = 0; i < nls; i++) 
+        apop_text_add(out, i, 0, translateChar(STRING_ELT(ls, i)));
+    snprintf(out->names->title, 100, "<categories for %s>", varname);
+    apop_data_show(out);
+    return out;
+}
+
 apop_data *apop_data_from_frame(SEXP in){
     apop_data *out;
     if (TYPEOF(in)==NILSXP) return NULL;
@@ -82,6 +94,13 @@ apop_data *apop_data_from_frame(SEXP in){
             }
             if(colname) apop_name_add(out->names, colname, 'c');
         }
+        //Factors
+        SEXP ls = getAttrib(this_col, R_LevelsSymbol);
+        if (ls){
+            apop_data *end;//find last page for adding factors.
+            for(end=out; end->more!=NULL; end=end->more);
+            end->more = get_factors(ls, colname);
+        }
     }
     UNPROTECT(3);
     return out;
@@ -136,6 +155,31 @@ void handle_names(apop_data *D, SEXP outdata){
     UNPROTECT(2);
 }
 
+apop_data* find_factor(SEXP vector, apop_data *in, int col){
+    char n[101], 
+         *thisname = 
+               (col==-1 && in->names)                ? in->names->vector
+             : (in->names && in->names->colct > col) ? in->names->column[col]
+                                                     : NULL;
+    if (thisname){
+        snprintf(n, 100, "<categories for %s>", thisname);
+        return apop_data_get_page(in, n);
+    }
+    return NULL;
+
+}
+
+void set_factor(SEXP vector, apop_data *fp){
+    SEXP la;
+    PROTECT(la = allocVector(STRSXP, fp->textsize[0]));
+    for (int j = 0; j < fp->textsize[0]; j++) {
+        SET_STRING_ELT(la, j, mkChar(*fp->text[j]));
+    }
+    setAttrib(vector, R_LevelsSymbol, la);
+    setAttrib(vector, R_ClassSymbol, mkString("factor"));
+    UNPROTECT(1);
+}
+
 SEXP data_frame_from_apop_data(apop_data *in){
     if (!in) return R_NilValue;
     int numeric_rows = !!(in->vector) 
@@ -145,13 +189,19 @@ SEXP data_frame_from_apop_data(apop_data *in){
     SEXP out, onerow;
     PROTECT(out = allocVector(VECSXP, numeric_rows + text_rows));
     int col_ct = 0;
-    int firstrow = in->vector ? -1 : 0;
-    int lastrow = in->matrix ? in->matrix->size2 : 0;
-    for (int i= firstrow; i < lastrow; i++){
+    int firstcol = in->vector ? -1 : 0;
+    int lastcol = in->matrix ? in->matrix->size2 : 0;
+    for (int i= firstcol; i < lastcol; i++){
         int len = (i == -1) ? in->vector->size : in->matrix->size1;
-        SET_VECTOR_ELT(out, col_ct++, (onerow = allocVector(REALSXP, len)));
-        for (int j=0; j< len; j++) 
-            REAL(onerow)[j] = apop_data_get(in, j, i);
+        apop_data *factorpage = find_factor(onerow, in, i);
+        if (factorpage){
+            SET_VECTOR_ELT(out, col_ct++, (onerow = allocVector(INTSXP, len)));
+            for (int j=0; j< len; j++) INTEGER(onerow)[j] = apop_data_get(in, j, i);
+            set_factor(onerow, factorpage);
+        } else {
+            SET_VECTOR_ELT(out, col_ct++, (onerow = allocVector(REALSXP, len)));
+            for (int j=0; j< len; j++) REAL(onerow)[j] = apop_data_get(in, j, i);
+        }
     }
     for (int i= 0; i < text_rows; i++){
         int len = in->textsize[0];
