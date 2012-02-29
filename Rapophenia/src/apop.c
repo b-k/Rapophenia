@@ -1,10 +1,7 @@
 /** \file 
   Conversion from apop_data to R matrix/data frame
 */
-#include <R.h>
-#include <Rinternals.h>
-#include <R_ext/Rdynload.h>
-#include <apop.h>
+#include "rapophenia.h"
 
 /** \mainpage Intro
 
@@ -171,6 +168,7 @@ SEXP gsl_matrix_test(SEXP nrow, SEXP ncol){
   \param D An \c apop_data set. I ignore everything but the matrix and names.
   \return An R \c SEXP, representing a matrix with row and column names.
 */
+/*
 SEXP R_get_apop_data_matrix(const apop_data *D){
     if (!D || !D->matrix || !D->matrix->size2) return R_NilValue;
 
@@ -179,7 +177,7 @@ SEXP R_get_apop_data_matrix(const apop_data *D){
     //no more names.
     UNPROTECT(1);
     return Y;
-}
+}*/
 
 void R_apop_query(char** query){
 	apop_query("%s", query[0]);
@@ -197,53 +195,17 @@ void R_init_Rapophenia(DllInfo *info){
 	   {"R_STRSXP_TO_C", (DL_FUNC) &R_STRSXP_TO_C, 1},
        {NULL, NULL, 0}
      };*/
-	 R_RegisterCCallable("Rapophenia", "R_get_apop_data_matrix", (DL_FUNC) &R_get_apop_data_matrix);
+     init_registry();
+	 //R_RegisterCCallable("Rapophenia", "R_get_apop_data_matrix", (DL_FUNC) &R_get_apop_data_matrix);
 	 //R_RegisterCCallable("Rapophenia", "R_get_apop_data_vector", (DL_FUNC) &R_get_apop_data_vector);
 	 R_RegisterCCallable("Rapophenia", "R_STRSXP_TO_C", (DL_FUNC) &R_STRSXP_TO_C);
+    R_RegisterCCallable("Rapophenia", "data_frame_from_apop_data",(DL_FUNC) &data_frame_from_apop_data);
+    R_RegisterCCallable("Rapophenia", "apop_data_from_frame",(DL_FUNC) &apop_data_from_frame);
+    R_RegisterCCallable("Rapophenia", "get_am_from_registry",(DL_FUNC) &get_am_from_registry);
  }
 
-//called by test_Rapophenia. converts an apop_data set to an R data frame and back,
-//then verifies that the results are the same. Exception: if names are missing on the C
-//side, they get filled in. So don't check names if the C side doesn't have any.
-static void round_trip(apop_data *m){
-    apop_data *m_copy = apop_data_copy(m);
-    if (m->matrix){
-        int dim1=m->matrix->size1,
-            dim2=m->matrix->size2;
-        SEXP rmatrix = R_get_apop_data_matrix(m);
-        apop_data *mreturned = apop_data_from_R_matrix(rmatrix);
-        assert(mreturned->matrix->size1 == m->matrix->size1);
-        assert(mreturned->matrix->size2 == m->matrix->size2);
-        for (int i=0; i< dim1; i++)
-            for (int j=0; j< dim2; j++)
-                assert(apop_data_get(mreturned, i, j) == apop_data_get(m, i, j));
-/*        if (m->names->rowct && m->names->colct){ //If names are missing, Row_i and Col_j are inserted.
-            assert(mreturned->names->rowct == m->names->rowct);
-            assert(mreturned->names->colct == m->names->colct);
-            for (int i=0; i< mreturned->names->rowct; i++)
-                assert(apop_strcmp(mreturned->names->row[i], m->names->row[i]));
-            for (int j=0; j< mreturned->names->colct; j++)
-                assert(apop_strcmp(mreturned->names->column[j], m->names->column[j]));
-        }*/
-        apop_data_free(mreturned);
-    }
-    /*if (m->vector){
-        int dim=m->vector->size;
-        SEXP rvector = R_get_apop_data_vector(m);
-        apop_data *mreturned = apop_data_from_R_vector(rvector);
-        assert(mreturned->vector->size == m->vector->size);
-        for (int i=0; i< dim; i++)
-            assert(apop_data_get(mreturned, i, -1) == apop_data_get(m, i, -1));
-        if (m->names->rowct){ //If names are missing, Row_i is are inserted.
-            assert(mreturned->names->rowct == m->names->rowct);
-            for (int i=0; i< mreturned->names->rowct; i++)
-                assert(apop_strcmp(mreturned->names->row[i], m->names->row[i]));
-        }
-        apop_data_free(mreturned);
-    }*/
-}
-
 //This is what the R tests call. Not really intended for use by users.
+//Needs a rewrite!
 void test_Rapophenia(){ //by BK
     for (int i=0; i< 1000; i++){ //see if we can get R's garbage collector active.
         int dim1=50, dim2=12;
@@ -252,7 +214,6 @@ void test_Rapophenia(){ //by BK
         for (int i=0; i< dim1; i++)
             for (int j=0; j< dim2; j++)
                 apop_data_set(m, i, j, gsl_rng_uniform(r));
-        round_trip(m);
         apop_data_free(m);
 
         m = apop_data_alloc(3, 3);
@@ -261,17 +222,16 @@ void test_Rapophenia(){ //by BK
                 apop_data_set(m, i, j, gsl_rng_uniform(r));
         apop_data_add_names(m, 'r', "one", "two", "three");
         apop_data_add_names(m, 'c', "four", "five", "six");
-        round_trip(m);
         apop_data_free(m);
 
         m = apop_data_alloc(3);
         for (int i=0; i< 3; i++)
             apop_data_set(m, i, -1, gsl_rng_uniform(r));
         apop_data_add_names(m, 'r', "one", "two", "three");
-        round_trip(m);
         apop_data_free(m);
     }
 }
+
 
 /*
 

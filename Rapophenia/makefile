@@ -20,8 +20,10 @@ quick:
 
 pkg: doc
 	mkdir -p Rapophenia/inst/doc
+	mkdir -p Rapophenia/inst/include
 	cp -r man R src tests Rapophenia
 	cp -r pkging/* Rapophenia
+	cp -r Rapophenia/src/*.h Rapophenia/inst/include/
 	cp doc/rapop*.pdf  Rapophenia/inst/doc/
 	cp src/latex/refman.pdf  Rapophenia/inst/doc/Rapohenia.pdf
 	cd Rapophenia; autoconf; rm configure.ac; rm -r autom4te.cache
