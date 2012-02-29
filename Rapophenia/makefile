@@ -31,3 +31,11 @@ pkg: doc
 doc: 
 	#cd src; doxygen doxyconfig
 	cd doc; pdflatex rapophenia-guide.pdf
+
+push:
+	@if [ "x$(MSG)" = 'x' ] ; then echo "MSG='whatever, dude.'" make push; fi
+	@test "x$(MSG)" != 'x'
+	git commit -a  -m "$(MSG)"
+	git svn fetch
+	git svn rebase
+	git svn dcommit
