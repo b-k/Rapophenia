@@ -64,7 +64,7 @@ apop_data *apop_data_from_frame(SEXP in){
             printf("col %i is chars\n", i);
             if(colname) apop_name_add(out->names, colname, 't');
             for (int j=0; j< total_rows; j++)
-                apop_text_add(out, j, current_text_col, translateChar(STRING_ELT(cl, j)));
+                apop_text_add(out, j, current_text_col, translateChar(STRING_ELT(this_col, j)));
             current_text_col++;
             continue;
         } else if (apop_strcmp(colname, "Vector")){
