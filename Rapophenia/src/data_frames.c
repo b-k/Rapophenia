@@ -64,7 +64,8 @@ apop_data *apop_data_from_frame(SEXP in){
             printf("col %i is chars\n", i);
             if(colname) apop_name_add(out->names, colname, 't');
             for (int j=0; j< total_rows; j++)
-                apop_text_add(out, j, current_text_col, translateChar(STRING_ELT(this_col, j)));
+                apop_text_add(out, j, current_text_col,
+				(STRING_ELT(this_col,j)==NA_STRING ? apop_opts.db_nan : translateChar(STRING_ELT(this_col, j))));
             current_text_col++;
             continue;
         } else if (apop_strcmp(colname, "Vector")){
@@ -86,11 +87,14 @@ apop_data *apop_data_from_frame(SEXP in){
             if (TYPEOF(this_col) == INTSXP){
                 printf("col %i is ints\n", i);
                 int *vals = INTEGER(this_col);
-                for (int j=0; j< onecol->size; j++)
-                    gsl_vector_set(onecol, j, (ISNAN(vals[j]) ? GSL_NAN : vals[j]));
+                for (int j=0; j< onecol->size; j++){
+					printf("%g\n",vals[j]);
+                    gsl_vector_set(onecol, j, (ISNAN(vals[j])||ISNA(vals[j]) ? GSL_NAN : vals[j]));
+					}
             } else {
                 double *vals = REAL(this_col);
-                apop_vector_fill_base(onecol, vals);
+                for (int j=0; j< onecol->size; j++)
+                    gsl_vector_set(onecol, j, (ISNAN(vals[j])||ISNA(vals[j]) ? GSL_NAN : vals[j]));
             }
             if(colname) apop_name_add(out->names, colname, 'c');
         }
