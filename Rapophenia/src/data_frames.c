@@ -68,35 +68,27 @@ apop_data *apop_data_from_frame(SEXP in){
 				(STRING_ELT(this_col,j)==NA_STRING ? apop_opts.db_nan : translateChar(STRING_ELT(this_col, j))));
             current_text_col++;
             continue;
-        } else if (apop_strcmp(colname, "Vector")){
-            out->vector = gsl_vector_alloc(total_rows);
-            if (TYPEOF(this_col) == INTSXP){
-                printf("col %i is ints\n", i);
-                int *vals = INTEGER(this_col);
-                for (int j=0; j< out->vector->size; j++)
-                    gsl_vector_set(out->vector, j, vals[j]);
-            } else {
-                double *vals = REAL(this_col);
-                for (int j=0; j< out->vector->size; j++)
-                    gsl_vector_set(out->vector, j, vals[j]);
-            }
-            apop_name_add(out->names, colname, 'v'); //which is "vector".
         } else {    //plain old matrix data.
-            Apop_col(out, current_numeric_col, onecol);
-            current_numeric_col++;
+            int col_in_question = current_numeric_col;
+            if (apop_strcmp(colname, "Vector")) {
+                out->vector = gsl_vector_alloc(total_rows);
+                col_in_question = -1;
+            } else {current_numeric_col++;}
+            Apop_col(out, col_in_question, onecol);
             if (TYPEOF(this_col) == INTSXP){
                 printf("col %i is ints\n", i);
                 int *vals = INTEGER(this_col);
                 for (int j=0; j< onecol->size; j++){
-					printf("%g\n",vals[j]);
-                    gsl_vector_set(onecol, j, (ISNAN(vals[j])||ISNA(vals[j]) ? GSL_NAN : vals[j]));
+					printf("%i\n",vals[j]);
+                    gsl_vector_set(onecol, j, (vals[j]==NA_INTEGER ? GSL_NAN : vals[j]));
 					}
             } else {
                 double *vals = REAL(this_col);
                 for (int j=0; j< onecol->size; j++)
                     gsl_vector_set(onecol, j, (ISNAN(vals[j])||ISNA(vals[j]) ? GSL_NAN : vals[j]));
             }
-            if(colname) apop_name_add(out->names, colname, 'c');
+            if(colname && col_in_question > -1) apop_name_add(out->names, colname, 'c');
+            else apop_name_add(out->names, colname, 'v'); //which is "vector".
         }
         //Factors
         SEXP ls = getAttrib(this_col, R_LevelsSymbol);
