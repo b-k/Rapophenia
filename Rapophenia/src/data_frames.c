@@ -61,7 +61,7 @@ apop_data *apop_data_from_frame(SEXP in){
         SEXP this_col = VECTOR_ELT(in, i);
         if (TYPEOF(this_col) == STRSXP){
             //could this be via aliases instead of copying?
-            printf("col %i is chars\n", i);
+            //printf("col %i is chars\n", i);
             if(colname) apop_name_add(out->names, colname, 't');
             for (int j=0; j< total_rows; j++)
                 apop_text_add(out, j, current_text_col,
@@ -76,10 +76,10 @@ apop_data *apop_data_from_frame(SEXP in){
             } else {current_numeric_col++;}
             Apop_col(out, col_in_question, onecol);
             if (TYPEOF(this_col) == INTSXP){
-                printf("col %i is ints\n", i);
+                //printf("col %i is ints\n", i);
                 int *vals = INTEGER(this_col);
                 for (int j=0; j< onecol->size; j++){
-					printf("%i\n",vals[j]);
+					//printf("%i\n",vals[j]);
                     gsl_vector_set(onecol, j, (vals[j]==NA_INTEGER ? GSL_NAN : vals[j]));
 					}
             } else {
