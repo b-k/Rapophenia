@@ -133,7 +133,7 @@ void handle_names(apop_data *D, SEXP outdata){
     //vector, matrix, text, weights names
     if (D->vector) 
         Add_name(colNames, (D->names->vector ? D->names->vector: "Vector"));
-    for (int cdx ; cdx < (D->matrix ? D->matrix->size2 : 0); cdx++)
+    for (int cdx=0 ; cdx < (D->matrix ? D->matrix->size2 : 0); cdx++)
         if (D->names->colct > cdx) Add_name(colNames, D->names->column[cdx])
         else Printf_name(colNames, "V%i", name_position);
     for (int cdx=0 ; cdx < D->textsize[1]; cdx++)
@@ -158,8 +158,9 @@ apop_data* find_factor(SEXP vector, apop_data *in, int col){
              : (in->names && in->names->colct > col) ? in->names->column[col]
                                                      : NULL;
     if (thisname){
-        snprintf(n, 100, "<categories for %s>", thisname);
-        return apop_data_get_page(in, n);
+/*        snprintf(n, 100, "<categories for %s>", thisname);
+        return apop_data_get_page(in, n);*/
+		return apop_data_get_factor_names(in,col,'d');
     }
     return NULL;
 
