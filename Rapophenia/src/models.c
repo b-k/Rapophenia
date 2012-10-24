@@ -12,7 +12,7 @@ Apop_settings_free(R_model, )
  //C doesn't do eval: we can't go from "apop_ols" to the apop_ols model.
  //I couldn't work out a way to send a list of opaque pointers to R. 
 
-So: we estabish this registry of apop_models. If you write a new C-side, model register it here.
+So: we estabish this registry of apop_models. If you write a new C-side model, register it here.
  */
 
 apop_model **apop_model_registry;
@@ -87,7 +87,7 @@ void init_registry(){
 apop_model * get_am_from_registry(char const * findme){
     apop_model *new_model = NULL;
     for (apop_model **m=apop_model_registry; *m; m++){
-        if (apop_strcmp(findme, (*m)->name)){
+        if (findme && !strcmp(findme, (*m)->name)){
              new_model= apop_model_copy(**m);
              break;
         }
@@ -101,7 +101,7 @@ SEXP get_from_registry(SEXP findmexp){
     const char *findme = sexp_to_string(findmexp);
     apop_model *new_model = NULL;
     for (apop_model **m=apop_model_registry; *m; m++){
-        if (apop_strcmp(findme, (*m)->name)){
+        if (findme && !strcmp(findme, (*m)->name)){
              new_model= apop_model_copy(**m);
              break;
         }
@@ -189,7 +189,7 @@ void handle_settings(apop_model *model, SEXP list){
     
     for (int i=0; i< len; i++){
         SEXP this = VECTOR_ELT(list, i); 
-        if (apop_strcmp(sexp_to_string(Get_slot(this, class)), "apop_mle_settings")){
+        if (!strcmp(sexp_to_string(Get_slot(this, class)), "apop_mle_settings")){
             SEXP apop_mle = this;
             if (!Apop_settings_get_group(model, apop_mle))
                 Apop_model_add_group(model, apop_mle);
@@ -198,7 +198,7 @@ void handle_settings(apop_model *model, SEXP list){
             settings_set_real(this, apop_mle, tolerance)
             settings_set_real(this, apop_mle, max_iterations)
         }
-        if (apop_strcmp(sexp_to_string(Get_slot(this, class)), "apop_parts_wanted_settings")){
+        if (!strcmp(sexp_to_string(Get_slot(this, class)), "apop_parts_wanted_settings")){
             if (!Apop_settings_get_group(model, apop_parts_wanted))
                 Apop_model_add_group(model, apop_parts_wanted);
             settings_logical_to_yesno(this, apop_parts_wanted, covariance);
@@ -367,13 +367,13 @@ SEXP Rapophenia_ll(SEXP model, SEXP env){
 SEXP get_model_element(SEXP model, SEXP elmtin){
     apop_model *m =R_ExternalPtrAddr(model);
     char const *elmt = translateChar(STRING_ELT(elmtin, 0));
-    if (apop_strcmp(elmt, "parameters"))
+    if (elmt && !strcmp(elmt, "parameters"))
         return data_frame_from_apop_data(m->parameters);
-    if (apop_strcmp(elmt, "environment")){
+    if (elmt && !strcmp(elmt, "environment")){
         if (is_c(m)) return R_NilValue;
         else return Apop_settings_get(m, R_model, env);
     }
-    if (apop_strcmp(elmt, "is_c_model")){
+    if (elmt && !strcmp(elmt, "is_c_model")){
         SEXP a_single_character;
         PROTECT(a_single_character = allocVector(STRSXP,1));
         char *cc, 

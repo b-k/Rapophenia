@@ -41,7 +41,7 @@ apop_data *apop_data_from_frame(SEXP in){
 
     if(cl !=R_NilValue && TYPEOF(cl)==STRSXP) //just check for now.
         for (int ndx=0; ndx < LENGTH(cl) && !found_vector; ndx++)
-            if (apop_strcmp(translateChar(STRING_ELT(cl, ndx)), "Vector")) found_vector++;
+            if (!strcmp(translateChar(STRING_ELT(cl, ndx)), "Vector")) found_vector++;
 
     int matrix_cols= total_cols-char_cols-found_vector;
     out= apop_data_alloc((found_vector?total_rows:0), (matrix_cols?total_rows:0),  matrix_cols);
@@ -70,7 +70,7 @@ apop_data *apop_data_from_frame(SEXP in){
             continue;
         } else {    //plain old matrix data.
             int col_in_question = current_numeric_col;
-            if (apop_strcmp(colname, "Vector")) {
+            if (colname && !strcmp(colname, "Vector")) {
                 out->vector = gsl_vector_alloc(total_rows);
                 col_in_question = -1;
             } else {current_numeric_col++;}
