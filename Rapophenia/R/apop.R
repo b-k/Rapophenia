@@ -54,7 +54,6 @@ TextToDB <- function(file, db, tbl, row.names=FALSE, col.names=TRUE, field.names
 
 getModelElement <- function(modelname, elementname){
     out<- .Call("get_model_element", modelname$model, elementname)
-    print(out)
     return(out)
     
 }
@@ -69,7 +68,7 @@ setupRapopModel <- function(input){
 #' @param data An environment, including anything needed by your models. The system will add a \c
 #' parameters element as necessary.
 #' @return a Rapophenia model. Interrogate it using \c getModelElement
-estimateRapopModel <- function(data, mod){
+RapopModelEstimate <- function(data, mod){
     #stopifnot(is.environment(data) || is.externalpointer(data)) #except there is no is.extpointer function that I could find.
     ctype <-getModelElement(mod, "is_c_model")
     if (ctype=="y"){
@@ -87,7 +86,7 @@ estimateRapopModel <- function(data, mod){
 #' Make one random draw from an estimated model.
 #'
 #' @param modelList A model that you set up using \c setupRapopModel and estimated using
-#'        \ref estimateRapopModel
+#'        \ref RapopModelEstimate
 #' @return a single draw from the model. If this is a C-side model, it will be a single vector; R-side models can return whatever form you like.
 RapopModelDraw <- function(modelList){
     return(.Call("Rapophenia_draw", modelList$model))

@@ -258,3 +258,13 @@ SEXP R_draw_wishart(SEXP Rmatrix){
 	return(Return);
 }
 */
+
+SEXP kldiv(SEXP dftop, SEXP dfbottom){
+	apop_data *top = apop_data_from_frame(dftop);
+	apop_data *bottom = apop_data_from_frame(dfbottom);
+	apop_model *mtop = apop_estimate(top,apop_pmf);
+	apop_model *mbottom = apop_estimate(bottom,apop_pmf);
+	double div = apop_kl_divergence(mtop,mbottom);
+	printf("%g\n",div);
+	return(R_NilValue);
+}

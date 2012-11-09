@@ -10,13 +10,13 @@ library(Rapophenia)
 
 .C("init_registry")
 mod <- get_C_model("banana")
-est <- estimateRapopModel(NULL, mod)
+est <- RapopModelEstimate(NULL, mod)
 params <- getModelElement(est, "parameters")
 print("C side banana, no constraint")
 print(params)
 
 mod <- get_C_model("bananac")
-est <- estimateRapopModel(NULL, mod)
+est <- RapopModelEstimate(NULL, mod)
 params <- getModelElement(est, "parameters")
 print("C side constrained banana")
 print(params)
@@ -56,7 +56,7 @@ modobj <- new("apop_model",
 	ll_function=ll,data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
 data <- as.environment(list(scaling=scale))
-est <- estimateRapopModel(data, mod)
+est <- RapopModelEstimate(data, mod)
 
 params <- getModelElement(est, "parameters")
 print("R-side via Apophenia")
@@ -69,7 +69,7 @@ print(params)
 #print(    system.time( for (i in 1:1000){
 #    mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana")
 #    data <- as.environment(list(scaling=scale))
-#    est <- estimateRapopModel(data, mod)
+#    est <- RapopModelEstimate(data, mod)
 #}))
 #
 #    print("optim timing")
@@ -93,7 +93,7 @@ cc <-function(env){
 modobj <- new("apop_model",
 	ll_function=ll, constraint_function=cc, data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
-est <- estimateRapopModel(data, mod)
+est <- RapopModelEstimate(data, mod)
 
 params <- getModelElement(est, "parameters")
 print("R-side constrained via Apophenia")
