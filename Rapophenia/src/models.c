@@ -50,34 +50,34 @@ void init_registry(){
     apop_model_registry = NULL;
     registry_length=0;
     for (apop_model **m=(apop_model*[]){
-                &apop_beta,
-                &apop_bernoulli,
+                apop_beta,
+                apop_bernoulli,
                 &banana,
                 &bananac,
-                &apop_binomial,
-                &apop_chi_squared,
-                &apop_dirichlet,
-                &apop_exponential,
-                &apop_f_distribution,
-                &apop_gamma,
-                &apop_improper_uniform,
-                &apop_iv,
-                &apop_kernel_density,
-                &apop_loess,
-                &apop_logit,
-                &apop_lognormal,
-                &apop_multinomial,
-                &apop_multivariate_normal,
-                &apop_normal,
-                &apop_ols,
-                &apop_pmf,
-                &apop_poisson,
-                &apop_probit,
-                &apop_t_distribution,
-                &apop_uniform,
-                &apop_wishart,
-                &apop_yule,
-                &apop_zipf, NULL}; *m; m++)
+                apop_binomial,
+                apop_chi_squared,
+                apop_dirichlet,
+                apop_exponential,
+                apop_f_distribution,
+                apop_gamma,
+                apop_improper_uniform,
+                apop_iv,
+                apop_kernel_density,
+                apop_loess,
+                apop_logit,
+                apop_lognormal,
+                apop_multinomial,
+                apop_multivariate_normal,
+                apop_normal,
+                apop_ols,
+                apop_pmf,
+                apop_poisson,
+                apop_probit,
+                apop_t_distribution,
+                apop_uniform,
+                apop_wishart,
+                apop_yule,
+                apop_zipf, NULL}; *m; m++)
         add_to_registry(*m);
 }
 
@@ -85,7 +85,7 @@ apop_model * get_am_from_registry(char const * findme){
     apop_model *new_model = NULL;
     for (apop_model **m=apop_model_registry; *m; m++){
         if (findme && !strcmp(findme, (*m)->name)){
-             new_model= apop_model_copy(**m);
+             new_model= apop_model_copy(*m);
              break;
         }
     }
@@ -99,7 +99,7 @@ SEXP get_from_registry(SEXP findmexp){
     apop_model *new_model = NULL;
     for (apop_model **m=apop_model_registry; *m; m++){
         if (findme && !strcmp(findme, (*m)->name)){
-             new_model= apop_model_copy(**m);
+             new_model= apop_model_copy(*m);
              break;
         }
     }
@@ -322,7 +322,7 @@ SEXP Rapophenia_draw(SEXP model){
     }
 }
 
-apop_model Rapophenia_model  = {"R model", 1, -1, -1, .dsize=-1, 
+apop_model *Rapophenia_model = &(apop_model){"R model", 1, -1, -1, .dsize=-1, 
     .estimate=R_estimate, .draw = R_draw, .log_likelihood=R_ll,
     .constraint=R_constraint 
    };
@@ -335,13 +335,13 @@ SEXP Rapophenia_estimate(SEXP env, SEXP model){
     apop_model *m =R_ExternalPtrAddr(model);
     if (TYPEOF(env)==ENVSXP){
         Apop_settings_add(m, R_model, env, env);
-        est = apop_estimate(NULL, *m);
+        est = apop_estimate(NULL, m);
     } else if (TYPEOF(env)==EXTPTRSXP)
-        est = apop_estimate(R_ExternalPtrAddr(env), *m);
+        est = apop_estimate(R_ExternalPtrAddr(env), m);
     else if (TYPEOF(env)==VECSXP)
-        est = apop_estimate(apop_data_from_frame(env), *m);
+        est = apop_estimate(apop_data_from_frame(env), m);
     else if (TYPEOF(env)==NILSXP)
-        est = apop_estimate(NULL, *m);
+        est = apop_estimate(NULL, m);
     else Apop_assert(0, "I don't know what to do with the first argument. "
                         "It's not NULL, an environment, or a vector|matrix.");
     UNPROTECT(2);

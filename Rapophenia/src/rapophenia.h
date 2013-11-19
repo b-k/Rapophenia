@@ -30,7 +30,7 @@ typedef struct {
    char is_c_model;
 } R_model_settings;
 
-apop_model Rapophenia_model;
+apop_model *Rapophenia_model;
 
 Apop_settings_declarations(R_model);
 
