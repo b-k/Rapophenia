@@ -65,7 +65,7 @@ apop_data *apop_data_from_frame(SEXP in){
             if(colname) apop_name_add(out->names, colname, 't');
             for (int j=0; j< total_rows; j++)
                 apop_text_add(out, j, current_text_col,
-				(STRING_ELT(this_col,j)==NA_STRING ? apop_opts.db_nan : translateChar(STRING_ELT(this_col, j))));
+				(STRING_ELT(this_col,j)==NA_STRING ? apop_opts.nan_string : translateChar(STRING_ELT(this_col, j))));
             current_text_col++;
             continue;
         } else {    //plain old matrix data.
