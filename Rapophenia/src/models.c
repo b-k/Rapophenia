@@ -24,12 +24,12 @@ void add_to_registry(apop_model *m){
 }
 
 int scaling=100;
-double ll(apop_data *ignore, apop_model *m){
+long double ll(apop_data *ignore, apop_model *m){
     double *p = m->parameters->vector->data;
     return -gsl_pow_2(gsl_pow_2(1-p[0]) + scaling*(gsl_pow_2(p[1]-p[0])));
 }
 
-double constr(apop_data *keep_ignoring, apop_model *m){
+long double constr(apop_data *keep_ignoring, apop_model *m){
     gsl_vector *p = m->parameters->vector;
     double penalty = 2-apop_vector_distance(p);
     if (penalty <=0) return 0;
@@ -43,8 +43,8 @@ static int is_c(apop_model * m){
                 || Apop_settings_get(m, R_model, is_c_model)=='y');
 }
 
-apop_model banana={"banana", .vbase=2, .log_likelihood=ll};
-apop_model bananac={"bananac", .vbase=2, .log_likelihood=ll, .constraint=constr};
+apop_model banana={"banana", .vsize=2, .log_likelihood=ll};
+apop_model bananac={"bananac", .vsize=2, .log_likelihood=ll, .constraint=constr};
 
 void init_registry(){
     apop_model_registry = NULL;
@@ -76,7 +76,6 @@ void init_registry(){
                 &apop_t_distribution,
                 &apop_uniform,
                 &apop_wishart,
-                &apop_wls,
                 &apop_yule,
                 &apop_zipf, NULL}; *m; m++)
         add_to_registry(*m);
@@ -106,7 +105,7 @@ SEXP get_from_registry(SEXP findmexp){
     }
     Apop_assert(new_model, "Couldn't find a registered model named %s.", findme);
     if (!Apop_settings_get_group(new_model, R_model))
-        Apop_model_add_group(new_model, R_model, .is_c_model = 'y');
+        Apop_settings_add_group(new_model, R_model, .is_c_model = 'y');
     return R_MakeExternalPtr(new_model, NULL, NULL);
 }
 
@@ -188,9 +187,9 @@ void handle_settings(apop_model *model, SEXP list){
     for (int i=0; i< len; i++){
         SEXP this = VECTOR_ELT(list, i); 
         if (!strcmp(sexp_to_string(Get_slot(this, class)), "apop_mle_settings")){
-            SEXP apop_mle = this;
+            //SEXP apop_mle = this;
             if (!Apop_settings_get_group(model, apop_mle))
-                Apop_model_add_group(model, apop_mle);
+                Apop_settings_add_group(model, apop_mle);
     //        settings_set_realptr(apop_mle, starting_pt)     //to do
             settings_set_logical(this, apop_mle, verbose)
             settings_set_real(this, apop_mle, tolerance)
@@ -198,7 +197,7 @@ void handle_settings(apop_model *model, SEXP list){
         }
         if (!strcmp(sexp_to_string(Get_slot(this, class)), "apop_parts_wanted_settings")){
             if (!Apop_settings_get_group(model, apop_parts_wanted))
-                Apop_model_add_group(model, apop_parts_wanted);
+                Apop_settings_add_group(model, apop_parts_wanted);
             settings_logical_to_yesno(this, apop_parts_wanted, covariance);
             settings_logical_to_yesno(this, apop_parts_wanted, predicted);
             settings_logical_to_yesno(this, apop_parts_wanted, tests);
@@ -213,16 +212,16 @@ SEXP setup_R_model(SEXP m){
     //get_sexp(m, settings);
     char *name = strdup(sexp_to_string(Get_slot(m, name)));
     if (name) snprintf(new_model->name, 100, "%s", name);
-    new_model->vbase = *INTEGER(Get_slot(m, vbase));
+    new_model->vsize = *INTEGER(Get_slot(m, vsize));
     new_model->dsize = *INTEGER(Get_slot(m, dsize));
-    new_model->m1base = *INTEGER(Get_slot(m, m1base));
-    new_model->m2base = *INTEGER(Get_slot(m, m2base));
-    Apop_model_add_group(new_model, R_model, 
+    new_model->msize1 = *INTEGER(Get_slot(m, msize1));
+    new_model->msize2 = *INTEGER(Get_slot(m, msize2));
+    Apop_settings_add_group(new_model, R_model, 
             .est_fn = Get_slot(m, estimate_function), 
             .ll_fn = Get_slot(m, ll_function), 
             .constr_fn = Get_slot(m, constraint_function), 
             .draw_fn = Get_slot(m, draw_function));
-    Apop_model_add_group(new_model, apop_parts_wanted);     //scaffolding.
+    Apop_settings_add_group(new_model, apop_parts_wanted);     //scaffolding.
 #define Rnil_to_NULL(sexp, checkme) if (apop_settings_get(new_model, R_model, sexp)==R_NilValue) checkme = NULL;
     Rnil_to_NULL(est_fn, new_model->estimate);
     Rnil_to_NULL(ll_fn, new_model->log_likelihood);
@@ -249,38 +248,35 @@ void check_data_and_params(apop_data *d, apop_model *m, SEXP env){
            ? setVar : defineVar)(install("parameters"), data_frame_from_apop_data(m->parameters), env);
 }
 
-apop_model *R_estimate(apop_data *d, apop_model *m){
+void R_estimate(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env);
     check_data_and_params(d, m, env);
     SEXP R_fcall;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, est_fn), env));
     eval(R_fcall, env);
     UNPROTECT(1);
-    return m;
 }
 
-double R_ll(apop_data *d, apop_model *m){
-    static int i=0;
+long double R_ll(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env); //protected at the Rapophenia_estimate or Rapophenia_ll level
     check_data_and_params(d, m, env);
     SEXP R_fcall, evaluated;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), env));
     //PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, ll_fn), R_NilValue));
     PROTECT(evaluated =eval(R_fcall, env));
-    double outval = REAL(evaluated)[0];
+    long double outval = REAL(evaluated)[0];
     UNPROTECT(2);
     return outval;
 }
 
-double R_constraint(apop_data *d, apop_model *m){
-    static int i=0;
+long double R_constraint(apop_data *d, apop_model *m){
     SEXP env = Apop_settings_get(m, R_model, env); //protected at the Rapophenia_estimate or Rapophenia_ll level
     check_data_and_params(d, m, env);
     SEXP R_fcall;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, constr_fn), env));
     SEXP evaluated;
     PROTECT(evaluated =eval(R_fcall, NULL));
-    double outval = REAL(evaluated)[0];
+    long double outval = REAL(evaluated)[0];
     if (outval){ //the parameters may have changed.
         SEXP psexp = findVar(install("parameters"), env);  //env is potected ==> psexp is.
         if (psexp !=R_UnboundValue){ //replace 

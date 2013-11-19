@@ -45,7 +45,7 @@ ll <- function(env){
 #tolerance = 1e-6,
 #starting_pt=starthere, verbose=1))))
 
-#mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana", settings=sets)
+#mod <- setupRapopModel(ll_function=ll, vsize=2, name="banana", settings=sets)
 
 setobj <-
 list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,
@@ -53,7 +53,7 @@ list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,
             verbose=TRUE),
 	new("apop_parts_wanted"))
 modobj <- new("apop_model",
-	ll_function=ll,data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
+	ll_function=ll,data=data.frame(scaling=scale),vsize=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
 data <- as.environment(list(scaling=scale))
 est <- RapopModelEstimate(data, mod)
@@ -67,7 +67,7 @@ print(params)
 #The reader may be able to find cases that reverse this.
 #    print("Rapop timing")
 #print(    system.time( for (i in 1:1000){
-#    mod <- setupRapopModel(ll_function=ll, vbase=2, name="banana")
+#    mod <- setupRapopModel(ll_function=ll, vsize=2, name="banana")
 #    data <- as.environment(list(scaling=scale))
 #    est <- RapopModelEstimate(data, mod)
 #}))
@@ -91,7 +91,7 @@ cc <-function(env){
 }
 
 modobj <- new("apop_model",
-	ll_function=ll, constraint_function=cc, data=data.frame(scaling=scale),vbase=2L,name="banana",settings=setobj)
+	ll_function=ll, constraint_function=cc, data=data.frame(scaling=scale),vsize=2L,name="banana",settings=setobj)
 mod <- setupRapopModel(modobj)
 est <- RapopModelEstimate(data, mod)
 

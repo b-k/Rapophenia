@@ -4,6 +4,9 @@
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
 
+//R is not careful about namespaces:
+#undef error
+
 /*When calling from another library, use these types. E.g.
 
 data_frame_from_apop_data_type rapop_df_from_ad;
