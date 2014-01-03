@@ -73,7 +73,6 @@ void init_registry(){
                 apop_probit,
                 apop_t_distribution,
                 apop_uniform,
-                apop_wishart,
                 apop_yule,
                 apop_zipf, NULL}; *m; m++)
         add_to_registry(*m);
@@ -273,7 +272,7 @@ long double R_constraint(apop_data *d, apop_model *m){
     SEXP R_fcall;
     PROTECT(R_fcall = lang2(Apop_settings_get(m, R_model, constr_fn), env));
     SEXP evaluated;
-    PROTECT(evaluated =eval(R_fcall, NULL));
+    PROTECT(evaluated =eval(R_fcall, env));
     long double outval = REAL(evaluated)[0];
     if (outval){ //the parameters may have changed.
         SEXP psexp = findVar(install("parameters"), env);  //env is potected ==> psexp is.

@@ -1,17 +1,4 @@
 
-#cut/pasted/not really modified from Apophenia/settings.h
-APOP_SIMPLEX_NM     =0 #/**< Nelder-Mead simplex (gradient handling rule is irrelevant) */
-APOP_CG_FR     =1      #/**<  Conjugate gradient (Fletcher-Reeves) (default) */
-APOP_CG_BFGS   =2      #/**<  Conjugate gradient (BFGS: Broyden-Fletcher-Goldfarb-Shanno) */
-APOP_CG_PR     =3      #/**<  Conjugate gradient (Polak-Ribiere) */
-APOP_SIMAN      =5     #    /**<  \ref simanneal "simulated annealing" */
-APOP_RF_NEWTON  =10    #    /**<  Find a root of the derivative via Newton's method */
-APOP_RF_HYBRID  =12  #      /**<  Find a root of the derivative via the Hybrid method */
-APOP_RF_HYBRID_NOSCALE  =13 #/**<  Find a root of the derivative via the Hybrid method; no internal scaling */
-
-
-
-
 #' Given a list of numeric, positive semi-definite matrices
 #' assumed to be from a Wishart distribution,
 #' return a new draw from the MLE-estimated Wishart.

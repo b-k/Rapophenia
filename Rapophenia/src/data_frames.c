@@ -74,7 +74,7 @@ apop_data *apop_data_from_frame(SEXP in){
                 out->vector = gsl_vector_alloc(total_rows);
                 col_in_question = -1;
             } else {current_numeric_col++;}
-            Apop_col(out, col_in_question, onecol);
+            Apop_col_v(out, col_in_question, onecol);
             if (TYPEOF(this_col) == INTSXP){
                 //printf("col %i is ints\n", i);
                 int *vals = INTEGER(this_col);

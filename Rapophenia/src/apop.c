@@ -249,7 +249,7 @@ SEXP R_draw_wishart(SEXP Rmatrix){
 	gsl_rng *r = apop_rng_alloc(12345);
 	apop_draw(E->matrix->data, r, M);
 	//matrix is stored as first row of E matrix
-	Apop_matrix_row(E->matrix, 0, onerow);
+	Apop_row_v(E->matrix, 0, onerow);
 	apop_data *D = apop_data_alloc((onerow->size)/2,(onerow->size)/2);
 	apop_data_unpack(onerow, D);
 	SEXP Return;
