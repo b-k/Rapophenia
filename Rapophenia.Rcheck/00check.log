@@ -1,0 +1,84 @@
+* using log directory ‘/home/b/census/Rapophenia/Rapophenia.Rcheck’
+* using R version 3.0.2 (2013-09-25)
+* using platform: x86_64-redhat-linux-gnu (64-bit)
+* using session charset: UTF-8
+* checking for file ‘Rapophenia/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘Rapophenia’ version ‘0.1’
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘Rapophenia’ can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... OK
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... WARNING
+Undocumented code objects:
+  ‘RapopModelDraw’ ‘RapopModelEstimate’ ‘Rapop_wishart’
+  ‘apop_data_from_frame’ ‘data_frame_from_apop_data’ ‘getModelElement’
+  ‘get_C_model’ ‘setupRapopModel’ ‘update’ ‘validate_apop_model’
+Undocumented S4 classes:
+  ‘a_function’ ‘apop_mle_settings’ ‘apop_model’ ‘apop_parts_wanted’
+  ‘apop_settings’
+All user-level objects in a package (including S4 classes and methods)
+should have documentation entries.
+See the chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.
+* checking for code/documentation mismatches ... WARNING
+Functions or methods with usage in documentation object 'ExtractFromApopDataList' but not in code:
+  ExtractFromApopDataList
+
+* checking Rd \usage sections ... OK
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking compilation flags in Makevars ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking compiled code ... NOTE
+File ‘/home/b/census/Rapophenia/Rapophenia.Rcheck/Rapophenia/libs/Rapophenia.so’:
+  Found ‘printf’, possibly from ‘printf’ (C)
+    Object: ‘apop.o’
+  Found ‘puts’, possibly from ‘printf’ (C), ‘puts’ (C)
+    Object: ‘data_frames.o’
+  Found ‘stderr’, possibly from ‘stderr’ (C)
+    Object: ‘models.o’
+
+Compiled code should not call entry points which might terminate R nor
+write to stdout/stderr instead of to the console.
+
+See ‘Writing portable packages’ in the ‘Writing R Extensions’ manual.
+* checking installed files from ‘inst/doc’ ... OK
+* checking examples ... NONE
+* checking for unstated dependencies in tests ... OK
+* checking tests ... OK
+  Running ‘C_tests.R’
+  Running ‘siman.R’
+* checking PDF version of manual ... OK
+WARNING: There were 2 warnings.
+NOTE: There was 1 note.

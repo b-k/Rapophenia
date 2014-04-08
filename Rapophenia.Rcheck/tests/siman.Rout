@@ -1,0 +1,176 @@
+
+R version 3.0.2 (2013-09-25) -- "Frisbee Sailing"
+Copyright (C) 2013 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(Rapophenia)
+
+Attaching package: 'Rapophenia'
+
+The following object is masked from 'package:stats':
+
+    update
+
+> 
+> # model = (ll_function = ll,
+> #         name = "blah",
+> #         settings = c(apop_mle = c(tolerance=1e-5, verbose =1),
+> #                     apop_parts_wanted = c()
+> #             )
+> #         )
+> 
+> 
+> .C("init_registry")
+list()
+> mod <- get_C_model("banana")
+> est <- RapopModelEstimate(NULL, mod)
+> params <- getModelElement(est, "parameters")
+> print("C side banana, no constraint")
+[1] "C side banana, no constraint"
+> print(params)
+$Vector
+[1] 1 1
+
+attr(,"row.names")
+character(0)
+> 
+> mod <- get_C_model("bananac")
+> est <- RapopModelEstimate(NULL, mod)
+> params <- getModelElement(est, "parameters")
+> print("C side constrained banana")
+[1] "C side constrained banana"
+> print(params)
+$Vector
+[1] 1.413173 1.415254
+
+attr(,"row.names")
+character(0)
+> 
+> 
+> starthere <-as.vector(c(8,0.1))
+> scale <- 10
+> 
+> print("R optim says:")
+[1] "R optim says:"
+>     optim(starthere, 
++  function(env){ return ((1-env[1])**2 + scale *(env[2]-env[1]**2)**2) }
++  )
+$par
+[1] 0.9932204 0.9830292
+
+$value
+[1] 0.0001655061
+
+$counts
+function gradient 
+      83       NA 
+
+$convergence
+[1] 0
+
+$message
+NULL
+
+> 
+> 
+> 
+> #Rosenbrock's banana function
+> #takes in an environment.
+> #   Assume elements named scaling and parameters
+> ll <- function(env){
++     return (-((1-env$parameters$Vector[1])**2 + env$scaling*(env$parameters$Vector[2]-env$parameters$Vector[1]**2)**2))
++ }
+> 
+> #sets <- as.environment(list(
+> #apop_parts_wanted=as.environment(list(none=0)),
+> #apop_mle=as.environment(list(
+> #tolerance = 1e-6,
+> #starting_pt=starthere, verbose=1))))
+> 
+> #mod <- setupRapopModel(ll_function=ll, vsize=2, name="banana", settings=sets)
+> 
+> setobj <-
++ list(new("apop_mle_settings",tolerance=1e-6,starting_pt=starthere,
++ # method=APOP_SIMAN,
++             verbose=TRUE),
++ 	new("apop_parts_wanted"))
+> modobj <- new("apop_model",
++ 	ll_function=ll,data=data.frame(scaling=scale),vsize=2L,name="banana",settings=setobj)
+> mod <- setupRapopModel(modobj)
+> data <- as.environment(list(scaling=scale))
+> est <- RapopModelEstimate(data, mod)
+    1 1.000e+00 1.000e+00 f()=  0.000 size=0.024
+> 
+> params <- getModelElement(est, "parameters")
+> print("R-side via Apophenia")
+[1] "R-side via Apophenia"
+> print(params)
+$Vector
+[1] 1 1
+
+attr(,"row.names")
+character(0)
+> #stopifnot(sqrt(crossprod(params$Vector - as.vector(c(1,1)))) < 1e-3) ############################
+> 
+> #Some timing tests. Last time we tried it, Rapop was about 4x faster than optim.
+> #The reader may be able to find cases that reverse this.
+> #    print("Rapop timing")
+> #print(    system.time( for (i in 1:1000){
+> #    mod <- setupRapopModel(ll_function=ll, vsize=2, name="banana")
+> #    data <- as.environment(list(scaling=scale))
+> #    est <- RapopModelEstimate(data, mod)
+> #}))
+> #
+> #    print("optim timing")
+> # print(   system.time( for (i in 1:1000){
+> #    optim(starthere, 
+> # function(env){ return ((1-env[1])^2 + scale *(env[2]-env[1]^2)^2) }
+> # )
+> #}))
+> 
+> 
+> cc <-function(env){
++     #.Internal(inspect(env))
++     penalty <- 2-sqrt(env$parameters$Vector[1]**2 + env$parameters$Vector[2]**2)
++     if (penalty <= 0) return (0)
++     #else
++     env$parameters$Vector[1] <- env$parameters$Vector[1]*2/(2-penalty)
++     env$parameters$Vector[2] <- env$parameters$Vector[2]*2/(2-penalty)
++     return(penalty)
++ }
+> 
+> modobj <- new("apop_model",
++ 	ll_function=ll, constraint_function=cc, data=data.frame(scaling=scale),vsize=2L,name="banana",settings=setobj)
+> mod <- setupRapopModel(modobj)
+> est <- RapopModelEstimate(data, mod)
+    1 1.323e+00 1.500e+00 f()=  0.752 size=0.053
+> 
+> params <- getModelElement(est, "parameters")
+> print("R-side constrained via Apophenia")
+[1] "R-side constrained via Apophenia"
+> print(params)
+$Vector
+[1] 1.323357 1.499575
+
+attr(,"row.names")
+character(0)
+> 
+> 
+> #, parameters=as.vector(c(1.2,2.3))
+> #.Call("Rapophenia_ll", m)
+> 
+> proc.time()
+   user  system elapsed 
+  0.747   0.072   0.796 
