@@ -31,7 +31,8 @@ doc:
 	#cd src; doxygen doxyconfig
 	cd doc; pdflatex rapophenia-guide
 	
-push-pkg: HASH="`git log -1 | grep commit | cut -f2 -d' ' | head -c 8`"
+HASH="`git log -1 | grep commit | cut -f2 -d' ' | head -c 8`"
+
 push-pkg:
 	git checkout -b pkg-$(HASH)
 	make
@@ -40,7 +41,7 @@ push-pkg:
 	git add .
 	git rm -f Rapophenia*tar.gz config.log config.status
 	git commit -a -m 'Rebuilt package'
-	git merge -X ours remotes/origin/pkg
+	git merge -X theirs remotes/origin/pkg
 	git push origin pkg
-	git branch -d pkg-$(HASH)
+	git branch -d `git branch| grep pkg-`
 	git checkout master
