@@ -1,0 +1,112 @@
+* installing *source* package ‘Rapophenia’ ...
+configure: loading site script /usr/share/config.site
+./configure: line 2154: -Wall: command not found
+checking for gcc... gcc -m64 -std=gnu99
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether gcc -m64 -std=gnu99 accepts -g... yes
+checking for gcc -m64 -std=gnu99 option to accept ISO C89... none needed
+checking for cos in -lm... yes
+checking for cblas_dgemm in -lgslcblas... yes
+checking for gsl_blas_dgemm in -lgsl... yes
+checking for sqlite3_exec in -lsqlite3... yes
+checking for apop_data_alloc_base in -lapophenia... yes
+-----------------------------------------------------------
+Check for GNU Scientific, SQLite3, and Apophenia libraries went OK.
+-----------------------------------------------------------
+checking how to run the C preprocessor... gcc -m64 -std=gnu99 -E
+checking for grep that handles long lines and -e... /bin/grep
+checking for egrep... /bin/grep -E
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking for size_t... yes
+checking for working alloca.h... yes
+checking for alloca... yes
+checking for ANSI C header files... (cached) yes
+checking float.h usability... yes
+checking float.h presence... yes
+checking for float.h... yes
+checking for inttypes.h... (cached) yes
+checking for stdlib.h... (cached) yes
+checking for string.h... (cached) yes
+checking for unistd.h... (cached) yes
+checking wchar.h usability... yes
+checking wchar.h presence... yes
+checking for wchar.h... yes
+checking gsl/gsl_rng.h usability... yes
+checking gsl/gsl_rng.h presence... yes
+checking for gsl/gsl_rng.h... yes
+checking sqlite3.h usability... yes
+checking sqlite3.h presence... yes
+checking for sqlite3.h... yes
+checking apop.h usability... yes
+checking apop.h presence... yes
+checking for apop.h... yes
+checking for an ANSI C-conforming const... yes
+checking for inline... inline
+checking for size_t... (cached) yes
+checking whether struct tm is in sys/time.h or time.h... time.h
+checking for ptrdiff_t... yes
+checking for stdlib.h... (cached) yes
+checking for GNU libc compatible malloc... yes
+checking for stdlib.h... (cached) yes
+checking for GNU libc compatible realloc... yes
+checking for working strtod... yes
+checking for floor... yes
+checking for memset... yes
+checking for pow... yes
+checking for regcomp... yes
+checking for sqrt... yes
+checking for strcasecmp... yes
+configure: creating ./config.status
+config.status: creating src/Makevars
+** libs
+make[2]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
+gcc -m64 -std=gnu99 -I/usr/include/R -DNDEBUG  -I/usr/local/include    -fpic  -O0 -g -Wall -c apop.c -o apop.o
+apop.c: In function ‘R_STRSXP_TO_C’:
+apop.c:43:9: warning: implicit declaration of function ‘asprintf’ [-Wimplicit-function-declaration]
+         asprintf(cptr+i, "%s", translateChar(STRING_ELT(s, i)));
+         ^
+gcc -m64 -std=gnu99 -I/usr/include/R -DNDEBUG  -I/usr/local/include    -fpic  -O0 -g -Wall -c data_frames.c -o data_frames.o
+data_frames.c: In function ‘get_factors’:
+data_frames.c:16:5: warning: implicit declaration of function ‘asprintf’ [-Wimplicit-function-declaration]
+     asprintf(&out->names->title, "<categories for %s>", varname);
+     ^
+gcc -m64 -std=gnu99 -I/usr/include/R -DNDEBUG  -I/usr/local/include    -fpic  -O0 -g -Wall -c models.c -o models.o
+models.c:323:5: warning: initialization from incompatible pointer type [enabled by default]
+     .estimate=R_estimate, .draw = R_draw, .log_likelihood=R_ll,
+     ^
+models.c:323:5: warning: (near initialization for ‘(anonymous).draw’) [enabled by default]
+models.c: In function ‘get_model_element’:
+models.c:373:9: warning: implicit declaration of function ‘asprintf’ [-Wimplicit-function-declaration]
+         asprintf(&cc, "%c", c);
+         ^
+models.c:379:1: warning: control reaches end of non-void function [-Wreturn-type]
+ }
+ ^
+gcc -m64 -std=gnu99 -shared -Wl,-z,relro -o Rapophenia.so apop.o data_frames.o models.o -lapophenia -lsqlite3 -lgsl -lgslcblas -lm -L/usr/lib64/R/lib -lR
+make[2]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[2]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[2]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
+installing to /home/b/census/Rapophenia/Rapophenia.Rcheck/Rapophenia/libs
+** R
+** inst
+** preparing package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded
+* DONE (Rapophenia)
