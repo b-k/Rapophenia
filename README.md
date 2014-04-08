@@ -12,9 +12,12 @@ It focuses on the two main data structures:
 
 R's package management system has no real mechanism for installing C libraries, so you have to install Apophenia yourself before installing this package. See [Apophenia's setup page](http://apophenia.info/setup.html) for details.
 
-After you clone this repository, call ```make``` to build the package. 
+Once you have Apophenia installed, you can use the ```install_github``` from the ```devtools``` package to install:
 
-We hope to provide a version that can be installed via ```install_github()``` from ```devtools``` soon.
+```            
+library(devtools)
+install_github("b-k/Rapophenia", ref="pkg")
+```            
 
 ## Status
 

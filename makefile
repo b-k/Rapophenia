@@ -30,11 +30,17 @@ pkg: doc
 doc: 
 	#cd src; doxygen doxyconfig
 	cd doc; pdflatex rapophenia-guide.pdf
-
-push:
-	@if [ "x$(MSG)" = 'x' ] ; then echo "MSG='whatever, dude.'" make push; fi
-	@test "x$(MSG)" != 'x'
-	git commit -a  -m "$(MSG)"
-	git svn fetch
-	git svn rebase
-	git svn dcommit
+	
+push-pkg: HASH="$(git log -1 | grep commit | cut -f2 -d' ' | head -c 8)"
+push-pkg:
+	git checkout -b pkg-$HASH
+	make
+	git rm makefile README.md tests/* src/* R/* pkging/* man/* doc/*
+	mv Rapophenia/* .
+	git add .
+	rm Rapophenia-*tgz config.log config.status
+	git commit -a -m 'Rebuilt package'
+	git checkout pkg
+	git merge -X remotes/origin/pkg pkg-$HASH
+	git branch -d pkg-$HASH
+	git checkout master
