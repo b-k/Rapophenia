@@ -1,0 +1,12 @@
+Package: Rapophenia
+Type: Package
+Title: R wrapper functions for Klemens' Apophenia C library
+Version: 0.1
+Date: 2010-06-14
+Author: Rolando Rodriguez
+Maintainer: Rolando Rodriguez <rolando.a.rodriguez@census.gov>
+Depends: R (>= 2.9.2), methods
+Description: Wrapper functions for the C library Apophenia.
+	Currently contains wrappers for accessing elements
+	of apop_data structures.
+License: GPL (>= 2)
