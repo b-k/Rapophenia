@@ -10,7 +10,11 @@
 * checking if this is a source package ... OK
 * checking if there is a namespace ... OK
 * checking for executable files ... OK
-* checking for hidden files and directories ... OK
+* checking for hidden files and directories ... NOTE
+Found the following hidden files and directories:
+  tests/.siman.R.swp
+These were most likely included in error. See section ‘Package
+structure’ in the ‘Writing R Extensions’ manual.
 * checking for portable file names ... OK
 * checking for sufficient/correct file permissions ... OK
 * checking whether package ‘Rapophenia’ can be installed ... OK
@@ -81,4 +85,4 @@ See ‘Writing portable packages’ in the ‘Writing R Extensions’ manual.
   Running ‘siman.R’
 * checking PDF version of manual ... OK
 WARNING: There were 2 warnings.
-NOTE: There was 1 note.
+NOTE: There were 2 notes.

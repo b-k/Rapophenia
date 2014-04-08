@@ -73,7 +73,7 @@ checking for strcasecmp... yes
 configure: creating ./config.status
 config.status: creating src/Makevars
 ** libs
-make[2]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[1]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
 gcc -m64 -std=gnu99 -I/usr/include/R -DNDEBUG  -I/usr/local/include    -fpic  -O0 -g -Wall -c apop.c -o apop.o
 apop.c: In function ‘R_STRSXP_TO_C’:
 apop.c:43:9: warning: implicit declaration of function ‘asprintf’ [-Wimplicit-function-declaration]
@@ -97,9 +97,9 @@ models.c:379:1: warning: control reaches end of non-void function [-Wreturn-type
  }
  ^
 gcc -m64 -std=gnu99 -shared -Wl,-z,relro -o Rapophenia.so apop.o data_frames.o models.o -lapophenia -lsqlite3 -lgsl -lgslcblas -lm -L/usr/lib64/R/lib -lR
-make[2]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
-make[2]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
-make[2]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[1]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[1]: Entering directory `/home/b/census/Rapophenia/Rapophenia/src'
+make[1]: Leaving directory `/home/b/census/Rapophenia/Rapophenia/src'
 installing to /home/b/census/Rapophenia/Rapophenia.Rcheck/Rapophenia/libs
 ** R
 ** inst
