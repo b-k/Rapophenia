@@ -35,12 +35,12 @@ push-pkg: HASH="`git log -1 | grep commit | cut -f2 -d' ' | head -c 8`"
 push-pkg:
 	git checkout -b pkg-$(HASH)
 	make
-	#git rm makefile README.md tests/* src/* R/* pkging/* man/* doc/* inst/*
-	mv Rapophenia/* .
+	for i in `git ls-files`; do git rm $$i; done
+	rsync -aP Rapophenia/ .
 	git add .
-	rm Rapophenia-*tgz config.log config.status
+	git rm -f Rapophenia*tar.gz config.log config.status
 	git commit -a -m 'Rebuilt package'
-	git checkout pkg
-	git merge -X remotes/origin/pkg pkg-$(HASH)
+	git merge -X ours remotes/origin/pkg
+	git push origin pkg
 	git branch -d pkg-$(HASH)
 	git checkout master
