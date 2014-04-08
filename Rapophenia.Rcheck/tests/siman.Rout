@@ -173,4 +173,4 @@ character(0)
 > 
 > proc.time()
    user  system elapsed 
-  0.710   0.063   0.751 
+  0.729   0.065   0.779 
