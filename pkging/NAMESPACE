@@ -1,4 +1,0 @@
-useDynLib(Rapophenia)
-exportPattern("^[^\\.]")
-exportPattern("APOP_.*")
-
