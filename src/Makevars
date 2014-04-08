@@ -1,0 +1,1 @@
+PKG_LIBS=-lapophenia -lsqlite3 -lgsl -lgslcblas -lm 

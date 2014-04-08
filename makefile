@@ -35,7 +35,7 @@ push-pkg: HASH="`git log -1 | grep commit | cut -f2 -d' ' | head -c 8`"
 push-pkg:
 	git checkout -b pkg-$(HASH)
 	make
-	git rm makefile README.md tests/* src/* R/* pkging/* man/* doc/* inst/*
+	#git rm makefile README.md tests/* src/* R/* pkging/* man/* doc/* inst/*
 	mv Rapophenia/* .
 	git add .
 	rm Rapophenia-*tgz config.log config.status
