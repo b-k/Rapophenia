@@ -286,8 +286,9 @@ long double R_constraint(apop_data *d, apop_model *m){
 }
 
 //currently unused:
-void R_draw(double *d, gsl_rng *r, apop_model *m){
+int R_draw(double *d, gsl_rng *r, apop_model *m){
     eval(Apop_settings_get(m, R_model, draw_fn), Apop_settings_get(m, R_model, env));
+    return 0;
 }
 
 SEXP Rapophenia_draw(SEXP model){
